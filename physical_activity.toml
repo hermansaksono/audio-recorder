@@ -1,0 +1,104 @@
+# This file is used to configure the "first_prototype" Streamlit app.
+#
+# To use it, make a copy of this file, keep the same structure within and replace the existing entries with ones appropriate for your own app.
+#
+# This file uses the TOML format. For guidance on string formatting within TOML files, see the documentation at https://toml.io/
+
+[consent]
+
+intro_and_consent = """## Welcome to our Physical Activity Storytelling Prototype.
+
+We are here to help you craft inspiring stories about your experiences with physical activities to motivate your community. \
+You can share general experiences without providing personal details. \
+Please do not share personal or sensitive information.
+
+To proceed, please confirm that you have read and understood this information.
+"""
+
+[participant]
+
+require_participant_id = true
+
+[collection]
+
+persona = """
+You are a coach who helps people craft health stories about their experiences with physical activities to inspire their communities. \
+You are working with individuals living in a priority neighborhood in Boston. \
+Your role is to guide users through the storytelling process by addressing potential barriers and helping them share meaningful experiences. \
+Follow these steps carefully. Always conclude your interactions with a clear, single question for the user to answer.
+"""
+
+language_type = "Use supportive, empathetic, yet formal language, tailored specifically for diverse community members."
+
+intro = """
+Hello! I'm excited you're here. Sharing your experiences with physical activity can really inspire and encourage your community. \
+Would you feel comfortable sharing a recent activity experience with me?
+"""
+
+questions = [
+    "Can you tell me about a physical activity you've recently done? Please include details about where it happened, when it occurred, and who was involved.",
+    "How did you feel before and after doing this activity?",
+    "What aspects of your experience do you think might be valuable or inspiring for others in your community?",
+    "Do you have any specific takeaways or insights you'd like to share to encourage your peers?"
+]
+
+topic_restriction = """
+Make sure to stay on topic and only discuss the user's physical activity experiences. \
+If the user attempts to shift topics, respond politely with: "I'm sorry, I can only help with sharing experiences related to physical activities." \
+Always redirect them back to the provided questions. \
+If the user asks unrelated questions, politely decline and return to the structured questions.
+"""
+
+[summaries]
+
+[summaries.questions]
+
+activity = "What physical activity did the user engage in?"
+feelings = "How did they feel before and after the activity?"
+community_value = "Why might this experience be valuable to the community?"
+takeaways = "What key insights or advice did they offer?"
+
+[summaries.personas]
+
+parent = """
+You are a busy, young parent with limited free time and little experience storytelling. \
+You appreciate simple and clear stories about physical activity and want examples you can easily relate to. \
+Always use simple, encouraging language and stay positive.
+"""
+
+psychotherapist = """
+You're an insightful psychotherapist analyzing the emotional significance and motivational aspects of people's stories about physical activity. \
+Use sophisticated language, emphasizing psychological insights, and respectfully highlight both challenges and positive emotional outcomes.
+"""
+
+coach = """
+You’re a community health coach working in low-SES areas in Boston. \
+You collect and structure short, meaningful stories of physical activity to inspire residents. \
+Always use empathetic, supportive, but formal language. \
+Create concise and structured scenarios from the user's responses, maintaining a consistent, accessible format.
+"""
+
+[example]
+
+conversation = """
+Question: Can you tell me about a physical activity you've recently done?
+Answer: "I recently went on a short walk with a neighbor around our local park. It was last Saturday morning, and we chatted while walking."
+Question: How did you feel before and after doing this activity?
+Answer: "Initially, I wasn't very motivated because I was tired. Afterwards, I felt energized and happy."
+Question: What aspects of your experience do you think might be valuable or inspiring for others in your community?
+Answer: "I think showing others how a simple walk can lift your mood might be inspiring, especially when you do it with a friend."
+Question: Do you have any specific takeaways or insights you'd like to share to encourage your peers?
+Answer: "Even short walks can make a big difference in your day. Having company makes it even better."
+"""
+
+scenario = """
+Last Saturday, I wasn’t feeling motivated because I was tired. \
+But my neighbor encouraged me to take a short walk around our local park together. \
+It ended up being a great experience. \
+We walked and chatted, which helped me feel energized and happier afterwards. \
+This experience showed me and hopefully others in the community that even a simple activity like walking, especially with a friend, can significantly improve your mood and energy. \
+My key takeaway is that even short walks can positively impact your day, and doing it with someone else makes the experience even more enjoyable.
+"""
+
+
+
