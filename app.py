@@ -133,8 +133,8 @@ def initialiseAppPage():
     Initialise the Streamlit app's page.
     """
 
-    st.set_page_config(page_title="Study bot", page_icon="📖")
-    st.title("📖 Study bot")
+    st.set_page_config(page_title="Storytelling Chatbot", page_icon="💬")
+    st.title("💬 Storytelling Chatbot")
 
     # Hide GitHub icon
     st.markdown(

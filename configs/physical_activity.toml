@@ -6,13 +6,13 @@
 
 [consent]
 
-intro_and_consent = """## Welcome to our Physical Activity Storytelling Prototype.
+intro_and_consent = """## Welcome to our Physical Activity Storytelling Chatbot.
 
 We are here to help you craft inspiring stories about your physical activity experiences. Stories that can motivate your community. \
-There will be about 7 questions and may 5 minutes. You can share general experiences without providing personal details. \
+There will be about 7 questions and may take 5 minutes. You can share your experiences without providing personal details. \
 Please do not share personal or sensitive information.
 
-To proceed, please confirm that you have read and understood this information.
+To continue, please confirm that you have read and understood this information.
 """
 
 [participant]
