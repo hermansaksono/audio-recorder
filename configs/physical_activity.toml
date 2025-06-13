@@ -10,6 +10,8 @@ intro_and_consent = """## Welcome to our Physical Activity Storytelling Chatbot.
 
 We are here to help you craft inspiring stories about your physical activity experiences. Stories that can motivate your community. \
 There will be about 7 questions and may take 5 minutes. You can share your experiences without providing personal details. \
+\
+At the end, I will provide you with three example stories to help you tell the story that you like. \
 Please do not share personal or sensitive information.
 
 To continue, please confirm that you have read and understood this information.
@@ -71,14 +73,14 @@ You appreciate simple stories about physical activity and want examples you can 
 """
 
 hero_journey = """
-Your story has hero's journey arc with an interpersonal focus. You set out to acquire an important goal. You face obstacles along the way, but eventually you suceed.\
+Your story has hero's journey arc with an interpersonal focus. In the story, you set out to acquire an important goal. You face obstacles along the way, but eventually you suceed.\
 You are an outgoing community member who are engaged in many community events. \
 You think interpersonal relationships are important for healthy behavior. 
 """
 
 rags_to_riches = """
-Your story has rags to riches arc with a community focus. You owns something important, loses it all, but gains it back. You grow as a person as a result. \
-You’re a community health organizer who care about your community. \
+Your story has rags to riches arc with a community focus. In the story, you own something important, loses it all, but gains it back. You grow as a person as a result. \
+You’re a passionate community health organizer who care about your community. \
 You think being physical active needs the community to collaborate together.
 """
 
