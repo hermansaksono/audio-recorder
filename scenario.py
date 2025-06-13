@@ -89,13 +89,13 @@ def generate_scenarios_with_progress(llm_prompts, chat_model, summary_answers):
     Sets up the streamlit page for scenario generation.
     """
 
-    st.markdown("#### Summarising your story")
+    st.markdown("#### Generating example stories")
     messages_container = st.container(border=True)
 
     with messages_container:
         st.chat_message("ai").write(
             "Seems I have everything! "
-            "Let me try to summarise what you said in three scenarios. \n"
+            "Let me try to generate three examples to help you tell your own story. \n"
             "See you if you like any of these! "
         )
         progress_text = "Processing your scenarios"
@@ -159,7 +159,7 @@ def scenario_selection(popover, index):
     scenario (str): the text of the scenario that the button refers to
     """
     with popover:
-        st.markdown(f"How well does Scenario {index + 1} capture what you had in mind?")
+        st.markdown(f"How well does Example {index + 1} capture what you had in mind?")
         slider_name = f"slider_scenario_{index}"
 
         st.select_slider(
@@ -175,7 +175,7 @@ def scenario_selection(popover, index):
 
         # A judgement must be provided before the user can accept the scenario
         c1.button(
-            "Continue with this scenario 🎉",
+            "Continue with this example 🎉",
             key=f"yeskey_{index}",
             on_click=click_selection_yes,
             args=(index,),
@@ -234,7 +234,7 @@ def display_adaptation_page(chat_model, adaptation_prompt_template):
             to adapt the proposed scenario according to suggestions by the user
     """
 
-    st.markdown("#### Adapt your scenarios")
+    st.markdown("#### Adapt your examples")
     container = st.container(border=True)
     chat_input = st.chat_input()
 

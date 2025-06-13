@@ -16,7 +16,7 @@ def getData(llm_prompts, conversation_chain, msgs):
     Nothing returned as all data is stored in msgs.
     """
 
-    st.markdown("#### Collecting your story")
+    st.markdown("#### Collecting the details of your story")
     messages_container = st.container(border=True)
     chat_input = st.chat_input()
 

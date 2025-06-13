@@ -31,7 +31,7 @@ def reviewData(
 
     # If a scenario hasn't been selected yet, show all scenarios and feedback mechanisms
     if st.session_state["selected_scenario_index"] is None:
-        st.markdown("#### Review your scenarios")
+        st.markdown("#### Review these examples to help you tell your own story")
         st.divider()
 
         scenario_columns = st.columns(num_scenarios)
@@ -42,16 +42,16 @@ def reviewData(
         st.divider()
 
         st.chat_message("ai").write(
-            "Please have a look at the scenarios above. "
+            "Please have a look at the examples above. "
             "Use the 👍 and 👎  to leave a rating and short comment on each of the "
-            "scenarios. "
-            "Then pick the one that you like the most to continue."
+            "examples. "
+            "Then pick the one that you like the most to help you tell your own."
         )
 
         selection_columns = st.columns(num_scenarios)
         for index, column in enumerate(selection_columns):
             popover = column.popover(
-                f"Pick scenario {index + 1}", use_container_width=True
+                f"Pick example {index + 1}", use_container_width=True
             )
             scenario.scenario_selection(popover, index)
 
@@ -69,7 +69,7 @@ def reviewData(
 
 
 def set_up_feedback(scenario_index, smith_client, one_shot):
-    st.header(f"Scenario {scenario_index + 1}")
+    st.header(f"Example {scenario_index + 1}")
     st.write(st.session_state["generated_scenarios"][scenario_index])
 
     # Once feedback is submitted, it cannot be changed
