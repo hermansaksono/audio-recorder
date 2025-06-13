@@ -95,12 +95,7 @@ Answer: "Even short walks can make a big difference in your day. Having company 
 """
 
 scenario = """
-Last Saturday, I wasn’t feeling motivated because I was tired. \
-But my neighbor encouraged me to take a short walk around our local park together. \
-It ended up being a great experience. \
-We walked and chatted, which helped me feel energized and happier afterwards. \
-This experience showed me and hopefully others in the community that even a simple activity like walking, especially with a friend, can significantly improve your mood and energy. \
-My key takeaway is that even short walks can positively impact your day, and doing it with someone else makes the experience even more enjoyable.
+
 """
 
 
