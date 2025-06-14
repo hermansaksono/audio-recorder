@@ -37,7 +37,7 @@ def reviewData(
         scenario_columns = st.columns(num_scenarios)
         for col_index, column in enumerate(scenario_columns):
             with column:
-                set_up_feedback(col_index, smith_client, one_shot)
+                 set_up_feedback(col_index, smith_client, one_shot)
 
         st.divider()
 
@@ -73,20 +73,20 @@ def set_up_feedback(scenario_index, smith_client, one_shot):
     st.write(st.session_state["generated_scenarios"][scenario_index])
 
     # Once feedback is submitted, it cannot be changed
-    streamlit_feedback(
-        feedback_type="thumbs",
-        optional_text_label="[Optional] Please provide an explanation",
-        align="center",
-        key=f"column_{scenario_index + 1}_fb",
-        disable_with_score=st.session_state["scenario_feedback"][scenario_index],
-        on_submit=collectFeedback,
-        args=(
-            scenario_index,
-            st.session_state["generated_scenarios"][scenario_index],
-            smith_client,
-            one_shot,
-        ),
-    )
+    # streamlit_feedback(
+    #     feedback_type="thumbs",
+    #     optional_text_label="[Optional] Please provide an explanation",
+    #     align="center",
+    #     key=f"column_{scenario_index + 1}_fb",
+    #     disable_with_score=st.session_state["scenario_feedback"][scenario_index],
+    #     on_submit=collectFeedback,
+    #     args=(
+    #         scenario_index,
+    #         st.session_state["generated_scenarios"][scenario_index],
+    #         smith_client,
+    #         one_shot,
+    #     ),
+    # )
 
 
 def collectFeedback(answer, column_index, scenario, smith_client, one_shot):
