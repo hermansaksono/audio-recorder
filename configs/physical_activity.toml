@@ -8,7 +8,7 @@
 
 intro_and_consent = """## Welcome to our Physical Activity Storytelling Chatbot.
 
-The chatbot will help you craft inspiring stories about your physical activity experiences. Stories that can motivate your community. \
+We will help you craft inspiring stories about your physical activity experiences. Stories that can motivate your community. \
 There will be about 7 questions and may take 5 minutes. You can share your experiences without providing personal details. \
 \
 At the end, I will provide you with three example stories to help you tell the story that you like. \
@@ -98,7 +98,7 @@ Answer: "Even short walks can make a big difference in your day. Having company 
 """
 
 scenario = """
-Just tell ten sentences story using the persona's preferences. The story should us approachable language and provide vivid details.
+Just tell six sentences story using the persona's preferences. The story should us approachable language and provide vivid details.
 """
 
 
