@@ -23,7 +23,12 @@ def saveScenario(message_history, table):
     if table:
         save_session_data(package, table)
 
-    display_completion_page()
+    st.chat_message("ai").write(
+        ":tada: Yay! :tada:"
+        "You've now completed the interaction and hopefully found a story that "
+        "you liked! "
+        )
+    # display_completion_page()
 
 
 @traceable
@@ -56,13 +61,13 @@ def summarise_session_data(message_history):
         "participant_id": str(st.session_state["participant_id"]),
         "langsmith_session_id": str(st.session_state["langsmith_run_id"]),
         "completion_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "initial_scenario": st.session_state["generated_scenarios"][
-            st.session_state["selected_scenario_index"]
-        ],
+        # "initial_scenario": st.session_state["generated_scenarios"][
+        #     st.session_state["selected_scenario_index"]
+        # ],
         "all_scenario":st.session_state["generated_scenarios"],
-        "final_scenario": st.session_state["final_scenario"],
+        # "final_scenario": st.session_state["final_scenario"],
         "summary_answers": st.session_state["summary_answers"],
-        "scenarios": scenarios_with_feedback,
+        # "scenarios": scenarios_with_feedback,
         "chat_history": [(m.type, m.content) for m in message_history.messages],
         "chat_history_single_string": str(message_history),
     }
@@ -96,4 +101,3 @@ def display_completion_page():
         "You've now completed the interaction and hopefully found a scenario that "
         "you liked! "
     )
-    st.markdown(f":green[{st.session_state['final_scenario']}]")

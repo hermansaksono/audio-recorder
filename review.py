@@ -29,43 +29,43 @@ def reviewData(
 
     num_scenarios = len(st.session_state["generated_scenarios"])
 
-    # If a scenario hasn't been selected yet, show all scenarios and feedback mechanisms
-    if st.session_state["selected_scenario_index"] is None:
-        st.markdown("#### Review these examples to help you tell your own story")
-        st.divider()
+    # # If a scenario hasn't been selected yet, show all scenarios and feedback mechanisms
+    # if st.session_state["selected_scenario_index"] is None:
+    st.markdown("#### Review these examples to help you tell your own story")
+    st.divider()
 
-        scenario_columns = st.columns(num_scenarios)
-        for col_index, column in enumerate(scenario_columns):
-            with column:
-                set_up_feedback(col_index, smith_client, one_shot)
+    scenario_columns = st.columns(num_scenarios)
+    for col_index, column in enumerate(scenario_columns):
+        with column:
+              set_up_feedback(col_index, smith_client, one_shot)
 
-        st.divider()
+    #     st.divider()
 
-        st.chat_message("ai").write(
-            "Please have a look at the examples above. "
-            "Use the 👍 and 👎  to leave a rating and short comment on each of the "
-            "examples. "
-            "Then pick the one that you like the most to help you tell your own."
-        )
+    #     st.chat_message("ai").write(
+    #         "Please have a look at the examples above. "
+    #         "Use the 👍 and 👎  to leave a rating and short comment on each of the "
+    #         "examples. "
+    #         "Then pick the one that you like the most to help you tell your own."
+    #     )
 
-        selection_columns = st.columns(num_scenarios)
-        for index, column in enumerate(selection_columns):
-            popover = column.popover(
-                f"Pick example {index + 1}", use_container_width=True
-            )
-            scenario.scenario_selection(popover, index)
+    #     selection_columns = st.columns(num_scenarios)
+    #     for index, column in enumerate(selection_columns):
+    #         popover = column.popover(
+    #             f"Pick example {index + 1}", use_container_width=True
+    #         )
+    #         scenario.scenario_selection(popover, index)
 
-    # and finally, assuming we have selected a scenario, let's move to the final state!
-    # Note that we ensured that the screen is free for any new content now as people had
-    # to click to select a scenario -- streamlit is starting with a fresh page
-    else:
+    # # and finally, assuming we have selected a scenario, let's move to the final state!
+    # # Note that we ensured that the screen is free for any new content now as people had
+    # # to click to select a scenario -- streamlit is starting with a fresh page
+    # else:
         # great, we have a scenario selected, and all the key information is now in
         # t.session_state['scenario_package'], created in the
         # def click_selection_yes(button_num, scenario):
 
         # set the flow pointer accordingly
-        st.session_state["agentState"] = "finalise"
-        scenario.finaliseScenario(chat_model, adaptation_prompt_template)
+    st.session_state["agentState"] = "save"
+    # scenario.finaliseScenario(chat_model, adaptation_prompt_template)
 
 
 def set_up_feedback(scenario_index, smith_client, one_shot):
