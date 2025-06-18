@@ -37,7 +37,7 @@ def reviewData(
         scenario_columns = st.columns(num_scenarios)
         for col_index, column in enumerate(scenario_columns):
             with column:
-                 set_up_feedback(col_index, smith_client, one_shot)
+                set_up_feedback(col_index, smith_client, one_shot)
 
         st.divider()
 
