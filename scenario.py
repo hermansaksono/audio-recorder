@@ -109,7 +109,7 @@ def generate_scenarios_with_progress(llm_prompts, chat_model, summary_answers):
 
     # Update state and manually trigger a page refresh via button press
     # (Note that refreshing via e.g. st.rerun() can give 'failed runs' on LangSmith)
-    st.session_state["agentState"] = "review"
+    st.session_state["agentState"] = "save"
     st.button("I'm ready -- show me!", key="progressButton")
 
 

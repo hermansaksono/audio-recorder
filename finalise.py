@@ -23,12 +23,9 @@ def saveScenario(message_history, table):
     if table:
         save_session_data(package, table)
 
-    st.chat_message("ai").write(
-        ":tada: Yay! :tada:"
-        "You've now completed the interaction and hopefully found a story that "
-        "you liked! "
-        )
-    # display_completion_page()
+        logger.info("data saved")
+
+    display_completion_page()
 
 
 @traceable
@@ -95,6 +92,13 @@ def display_completion_page():
     """
     Displays the final scenario to the user.
     """
+    generated_scenarios = st.session_state["generated_scenarios"]
+    scenario_columns = st.columns(len(generated_scenarios))
+
+    for col_index, column in enumerate(scenario_columns):
+        with column:
+            st.header(f"Example {col_index + 1}")
+            st.write(generated_scenarios[col_index])
 
     st.markdown(":tada: Yay! :tada:")
     st.markdown(

@@ -65,6 +65,7 @@ def reviewData(
 
         # set the flow pointer accordingly
     st.session_state["agentState"] = "save"
+    st.rerun()
     # scenario.finaliseScenario(chat_model, adaptation_prompt_template)
 
 
