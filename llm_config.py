@@ -323,7 +323,8 @@ class LLMConfig:
             + self._generate_q_and_a(questions)
             + (
                 "\n"
-                "Create a scenario based on these responses.\n\n"
+                "Create a scenario with these responses as inspiration to craft a new "
+                "story that is similar in theme but not identical in content.\n"
                 "You are an expert Story Teller as a result all of your stories"
                 "has different structure and word choice"
                 "Your output should be a JSON file with a single entry called "
