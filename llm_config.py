@@ -324,6 +324,8 @@ class LLMConfig:
             + (
                 "\n"
                 "Create a scenario based on these responses.\n\n"
+                "You are an expert Story Teller as a result all of your stories"
+                "has different structure and word choice"
                 "Your output should be a JSON file with a single entry called "
                 '"output_scenario".'
             )
