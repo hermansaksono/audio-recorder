@@ -7,6 +7,7 @@ from langsmith import traceable
 from utils import score_mappings
 
 logger = st.logger.get_logger("micronarratives")
+save = False
 
 
 def saveScenario(message_history, table):
@@ -18,14 +19,17 @@ def saveScenario(message_history, table):
         table (DynamoDB.Table | None): a DynamoDB table where the data should be stored
     """
 
-    package = summarise_session_data(message_history)
+    display_completion_page(table)
 
-    if table:
+    if st.session_state.get("save") and table:
+        package = summarise_session_data(message_history)
         save_session_data(package, table)
-
         logger.info("data saved")
-
-    display_completion_page()
+        st.session_state.agentState = "final"
+        st.rerun()
+    else:
+        logger.info("data not saved")
+    
 
 
 @traceable
@@ -67,6 +71,7 @@ def summarise_session_data(message_history):
         # "scenarios": scenarios_with_feedback,
         "chat_history": [(m.type, m.content) for m in message_history.messages],
         "chat_history_single_string": str(message_history),
+        "user_story": st.session_state.get("user_feedback", ""),
     }
 
     logger.info(f"Prepared scenario package: {json.dumps(scenario_package, indent=4)}")
@@ -88,7 +93,7 @@ def save_session_data(package, table):
         logger.error(f"Unable to write to {table.table_name}:\n\t{e}")
 
 
-def display_completion_page():
+def display_completion_page(table):
     """
     Displays the final scenario to the user.
     """
@@ -100,6 +105,21 @@ def display_completion_page():
             st.header(f"Example {col_index + 1}")
             st.write(generated_scenarios[col_index])
 
+    user_feedback = st.text_area(
+    "Tell us what you think or pick your favorite scenario:",
+    value=st.session_state.get("user_feedback", "")
+)
+
+    if st.button("Submit"):
+        st.session_state["save"] = True
+        st.session_state["user_feedback"] = user_feedback
+        st.rerun()
+
+
+def display_final_page():
+    """
+    Displays the final scenario to the user.
+    """
     st.markdown(":tada: Yay! :tada:")
     st.markdown(
         "You've now completed the interaction and hopefully found a scenario that "

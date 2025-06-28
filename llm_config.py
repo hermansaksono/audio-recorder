@@ -127,7 +127,7 @@ class LLMConfig:
             '"FINISHED".\n\n'
             "Current conversation:\n"
             "{history}\n"
-            "Based on the history personalize the detail and tone of the question. \n"
+            "Based on the history skip questions that have already been answered \n"
             "Human: {input}\n"
             "AI: "
         )

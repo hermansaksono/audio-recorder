@@ -91,6 +91,8 @@ def stateAgent(
             )
         case "save":
             finalise.saveScenario(message_history, table)
+        case "final":
+            finalise.display_final_page()
 
 
 def markConsent():
