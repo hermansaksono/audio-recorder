@@ -114,20 +114,20 @@ class LLMConfig:
 
         questions_prompt_text = (
             "{persona}\n\n"
-            "Your goal is to gather structured answers to the following questions:\n\n"
+            "Your goal is to have a conversation"
+            "while gathering answers to these questions:\n\n"
             "{questions}\n"
-            "Ask each question one at a time.\n"
+            "Ask your questions in a way that encourages more detail, "
+            "using examples when helpful."
             "{language_type}\n"
-            "Ensure you get at least a basic answer to each question before moving to "
-            "the next.\n"
             "Never answer for the human. "
-            "If you unsure what the human meant, ask again. "
+            "If you unsure what the human meant, ask for specific details. "
             "{topic_restriction}\n"
             "{collection_complete}, stop the conversation and write a single word "
             '"FINISHED".\n\n'
             "Current conversation:\n"
             "{history}\n"
-            "Based on the history skip questions that have already been answered"
+            "Based on the history personalize the detail and tone of the question. \n"
             "Human: {input}\n"
             "AI: "
         )
