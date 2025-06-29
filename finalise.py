@@ -105,8 +105,24 @@ def display_completion_page(table):
             st.header(f"Example {col_index + 1}")
             st.write(generated_scenarios[col_index])
 
+    st.markdown("**Here are some aspects of your story.**")
+    labels = {
+    "aspirations": "Aspirations",
+    "activity": "Activity",
+    "location": "Location",
+    "time": "Time",
+    "companions": "Companions",
+    "feelings": "Feelings",
+    "takeaways": "Takeaways"
+    }
+
+    for field, content in st.session_state["summary_answers"].items():
+        label = labels.get(field, field.capitalize())
+        st.markdown(f"- **{label}**: {content}")
+
+    
     user_feedback = st.text_area(
-    "Tell us what you think or pick your favorite scenario:",
+    "Now it's your turn to write a story:",
     value=st.session_state.get("user_feedback", "")
 )
 
@@ -122,6 +138,5 @@ def display_final_page():
     """
     st.markdown(":tada: Yay! :tada:")
     st.markdown(
-        "You've now completed the interaction and hopefully found a scenario that "
-        "you liked! "
+        "You've now completed the interaction and written your own story! "
     )
