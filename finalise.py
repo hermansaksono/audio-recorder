@@ -140,3 +140,10 @@ def display_final_page():
     st.markdown(
         "You've now completed the interaction and written your own story! "
     )
+    st.markdown(
+        "**Here is your story!** "
+    )
+
+    st.markdown(
+        st.session_state.get("user_feedback", "")
+    )
