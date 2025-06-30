@@ -7,7 +7,9 @@ from langsmith import traceable
 from utils import score_mappings
 
 logger = st.logger.get_logger("micronarratives")
-save = False
+# if you want to save the final scenario please make save = False
+# and uncomment the statements included below
+save = True
 
 
 def saveScenario(message_history, table):
@@ -19,16 +21,17 @@ def saveScenario(message_history, table):
         table (DynamoDB.Table | None): a DynamoDB table where the data should be stored
     """
 
-    display_completion_page(table)
-
-    if st.session_state.get("save") and table:
+    # if st.session_state.get("save") and table:
+    if table:
         package = summarise_session_data(message_history)
         save_session_data(package, table)
         logger.info("data saved")
-        st.session_state.agentState = "final"
-        st.rerun()
+        # st.session_state.agentState = "final"
+        # st.rerun()
     else:
         logger.info("data not saved")
+
+    display_completion_page(table)
     
 
 
@@ -62,16 +65,11 @@ def summarise_session_data(message_history):
         "participant_id": str(st.session_state["participant_id"]),
         "langsmith_session_id": str(st.session_state["langsmith_run_id"]),
         "completion_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        # "initial_scenario": st.session_state["generated_scenarios"][
-        #     st.session_state["selected_scenario_index"]
-        # ],
         "all_scenario":st.session_state["generated_scenarios"],
-        # "final_scenario": st.session_state["final_scenario"],
         "summary_answers": st.session_state["summary_answers"],
-        # "scenarios": scenarios_with_feedback,
         "chat_history": [(m.type, m.content) for m in message_history.messages],
         "chat_history_single_string": str(message_history),
-        "user_story": st.session_state.get("user_feedback", ""),
+        # "user_story": st.session_state.get("user_feedback", ""),
     }
 
     logger.info(f"Prepared scenario package: {json.dumps(scenario_package, indent=4)}")
@@ -120,30 +118,33 @@ def display_completion_page(table):
         label = labels.get(field, field.capitalize())
         st.markdown(f"- **{label}**: {content}")
 
-    
-    user_feedback = st.text_area(
-    "Now it's your turn to write a story:",
-    value=st.session_state.get("user_feedback", "")
-)
+    st.markdown("**Now that you’ve seen the bullet points, " 
+    "bring the story to life—tell it out loud in your own words, " 
+    "just like you would if you were sharing it with a friend or " 
+    "family member who’s never heard it before.**")
+#     user_feedback = st.text_area(
+#     "Now it's your turn to write a story:",
+#     value=st.session_state.get("user_feedback", "")
+# )
 
-    if st.button("Submit"):
-        st.session_state["save"] = True
-        st.session_state["user_feedback"] = user_feedback
-        st.rerun()
+#     if st.button("Submit"):
+#         st.session_state["save"] = True
+#         st.session_state["user_feedback"] = user_feedback
+#         st.rerun()
 
 
-def display_final_page():
-    """
-    Displays the final scenario to the user.
-    """
-    st.markdown(":tada: Yay! :tada:")
-    st.markdown(
-        "You've now completed the interaction and written your own story! "
-    )
-    st.markdown(
-        "**Here is your story!** "
-    )
+# def display_final_page():
+#     """
+#     Displays the final scenario to the user.
+#     """
+#     st.markdown(":tada: Yay! :tada:")
+#     st.markdown(
+#         "You've now completed the interaction and written your own story! "
+#     )
+#     st.markdown(
+#         "**Here is your story!** "
+#     )
 
-    st.markdown(
-        st.session_state.get("user_feedback", "")
-    )
+#     st.markdown(
+#         st.session_state.get("user_feedback", "")
+#     )

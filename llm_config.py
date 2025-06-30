@@ -267,8 +267,8 @@ class LLMConfig:
             "You will output a JSON with {keys_string} keys.\n\n"
             "{questions}\n"
             "Message to date: {conversation_history}\n\n"
-            "Remember, only extract text that is in the messages above and do not "
-            "change it. "
+            "Remember, only extract text that is in the messages above and "
+            "fix the grammar, but keep the name of people or places. "
         )
 
         extraction_prompt_template = PromptTemplate(

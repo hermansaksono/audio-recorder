@@ -25,7 +25,8 @@ def display_customize_page(text, editable):
             st.write(text)
 
         participant_id = st.text_input(
-            "Enter your customization request:",
+            "Enter your customization request \n\n "
+            "For example: 'Please make my chatbot more cheerful'",
             value="",
             key="participant_customization_request",
             disabled=not editable,
