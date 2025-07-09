@@ -73,5 +73,5 @@ def get_participant_id(llm_prompts):
     if participant_id:
         logger.info(f"Participant ID: {participant_id}")
         st.session_state["participant_id"] = participant_id
-        st.session_state["agentState"] = "start"
+        st.session_state["agentState"] = "customize"
         st.rerun()

@@ -12,6 +12,7 @@ from langsmith import Client
 
 import check
 import conversation
+import customize
 import finalise
 import identify
 import review
@@ -61,6 +62,9 @@ def stateAgent(
     match st.session_state["agentState"]:
         case "identify":
             identify.get_participant_id(llm_prompts)
+        case "customize":
+            customize.get_customize_request(llm_prompts)
+            logger.info("try to customize")
         case "start":
             conversation.getData(
                 llm_prompts,
@@ -91,6 +95,8 @@ def stateAgent(
             )
         case "save":
             finalise.saveScenario(message_history, table)
+        case "final":
+            finalise.display_final_page()
 
 
 def markConsent():

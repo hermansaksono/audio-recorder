@@ -71,6 +71,10 @@ class LLMConfig:
         self.questions_intro = (
             config["collection"]["intro"].strip() + "\n\nLet me know when you're ready!"
         )
+
+        # Create a collection data needed to pass through another class
+        self.update_collection = config["collection"]
+
         self.questions_prompt_template = self.generate_questions_prompt_template(
             config["collection"]
         )
@@ -114,20 +118,21 @@ class LLMConfig:
 
         questions_prompt_text = (
             "{persona}\n\n"
-            "Your goal is to gather structured answers to the following questions:\n\n"
+            "Your goal is to have a conversation"
+            "while gathering answers to these questions:\n\n"
             "{questions}\n"
-            "Ask each question one at a time.\n"
+            "Ask your questions in a way that encourages more detail, "
+            "using examples when helpful. \n"
+            "Make sure that there are smooth transitions between questions. \n"
             "{language_type}\n"
-            "Ensure you get at least a basic answer to each question before moving to "
-            "the next.\n"
             "Never answer for the human. "
-            "If you unsure what the human meant, ask again. "
+            "If you unsure what the human meant, ask for specific details. "
             "{topic_restriction}\n"
             "{collection_complete}, stop the conversation and write a single word "
             '"FINISHED".\n\n'
             "Current conversation:\n"
             "{history}\n"
-            "Based on the history skip questions that have already been answered"
+            "Based on the history skip questions that have already been answered \n"
             "Human: {input}\n"
             "AI: "
         )
@@ -146,6 +151,67 @@ class LLMConfig:
             },
         )
 
+        return questions_prompt
+    
+        
+    def update_questions_prompt_template(self, customization):
+        """
+        Creates a prompt template to ask a list of questions to the user in a particular
+        style. This prompt contains instructions to the bot to remain on-topic, and
+        includes a marker for the end of the conversation ("FINISHED").
+        Args:
+            data_collection {}: dict containing the following items:
+                persona (str): the style in which the questions are to be asked
+                questions ([str]): list of questions to be answered by the user
+                language_type (str): the style of language to be used by the bot
+                topic_restriction (str): instructions to keep the bot on-topic
+        Returns:
+            LangChain.PromptTemplate: a prompt template with instructions on which
+                questions to ask the user, and how to do so.
+        """
+        data_collection = self.update_collection
+
+        questions_prompt_text = (
+            "{persona}\n\n"
+            "Your goal is to have a conversation"
+            "while gathering answers to these questions:\n\n"
+            "{questions}\n"
+            "Ask your questions in a way that encourages more detail, "
+            "using examples when helpful. \n"
+            "Make sure that there are smooth transitions between questions. \n"
+            "{language_type}\n"
+            "Never answer for the human. "
+            "If you unsure what the human meant, ask for specific details. "
+            "{topic_restriction}\n"
+            "{collection_complete}, stop the conversation and write a single word "
+            '"FINISHED".\n\n'
+            "Current conversation:\n"
+            "{history}\n"
+            "Based on the history skip questions that have already been answered \n"
+            "Human: {input}\n"
+            "AI: "
+        )
+
+        if customization:
+            persona = data_collection["persona"] + "Additionally" + customization
+        else:
+            persona = data_collection["persona"]
+
+        questions_prompt = PromptTemplate(
+            template=questions_prompt_text,
+            input_variables=["history", "input"],
+            partial_variables={
+                "persona": persona,
+                "questions": self._generate_question_list(data_collection["questions"]),
+                "language_type": data_collection["language_type"],
+                "topic_restriction": data_collection["topic_restriction"],
+                "collection_complete": self._generate_collection_complete_text(
+                    data_collection["questions"]
+                ),
+            },
+        )
+
+        self.questions_prompt_template = questions_prompt
         return questions_prompt
 
     def _generate_question_list(self, questions):
@@ -201,8 +267,8 @@ class LLMConfig:
             "You will output a JSON with {keys_string} keys.\n\n"
             "{questions}\n"
             "Message to date: {conversation_history}\n\n"
-            "Remember, only extract text that is in the messages above and do not "
-            "change it. "
+            "Remember, only extract text that is in the messages above and "
+            "fix the grammar, but keep the name of people or places. "
         )
 
         extraction_prompt_template = PromptTemplate(
@@ -323,7 +389,8 @@ class LLMConfig:
             + self._generate_q_and_a(questions)
             + (
                 "\n"
-                "Create a scenario based on these responses.\n\n"
+                "Create a scenario with these responses as inspiration to craft a new "
+                "story that is similar in theme but not identical in content.\n"
                 "You are an expert Story Teller as a result all of your stories"
                 "has different structure and word choice"
                 "Your output should be a JSON file with a single entry called "
