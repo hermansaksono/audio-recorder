@@ -117,7 +117,7 @@ Answer: "Even short walks can make a big difference in your day. Having company 
 """
 
 scenario = """
-Just tell ten sentences story using the persona's preferences. The story should us approachable language and provide vivid details.
+Just tell seven sentences story using the persona's preferences. The story should use approachable language and provide vivid details.
 """
 
 
