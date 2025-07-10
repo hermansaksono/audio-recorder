@@ -79,7 +79,7 @@ class LLMConfig:
             config["collection"]
         )
         self.questions_outro = (
-            "Great! You've walked me through all of the important details for a good story. Let me organize this information for you!"
+            "You've walked me through all of the important details for a good story. Let me organize this information for you!"
         )
 
         # Extraction process
