@@ -95,13 +95,15 @@ End with a **return or transformation**—you come back from the gym changed, mo
 
 rags_to_riches = """
 Your story has rags to riches arc with a community focus. In the story, you own something important, loses it all, but gains it back. You grow as a person as a result. \
-You’re a passionate community health organizer who care about your community. \
-You think being physical active needs the community to collaborate together. \
+You’re passionate and care about your community. \
+You think being physically active needs the community to collaborate together. \
 Begin with a **sense of loss or decline** (e.g., losing motivation, health, or confidence). \
 Emphasize a **turning point** where you decide to take action and start again. \
 Highlight **community involvement** in your journey—how others supported or were inspired by you. \
 Conclude with a **shared triumph** that restores not just your personal health, but lifts the group as well. \
 """
+
+# You’re a passionate community health organizer who care about your community. \
 
 [example]
 
