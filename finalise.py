@@ -122,6 +122,12 @@ def display_completion_page(table):
     "bring the story to life—tell it out loud in your own words, " 
     "just like you would if you were sharing it with a friend or " 
     "family member who’s never heard it before.**")
+
+    audio_value = st.audio_input("Start Recording")
+
+    if(audio_value):
+        st.session_state["Audio_Story"] = audio_value
+        st.audio(audio_value)
 #     user_feedback = st.text_area(
 #     "Now it's your turn to write a story:",
 #     value=st.session_state.get("user_feedback", "")
