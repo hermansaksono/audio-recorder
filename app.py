@@ -28,6 +28,7 @@ def stateAgent(
     message_history,
     memory,
     table,
+    bucket,
 ):
     """
     Main flow function of the whole interaction -- keeps track of the system state and
@@ -96,7 +97,7 @@ def stateAgent(
         case "save":
             finalise.saveScenario(message_history, table)
         case "final":
-            finalise.display_final_page()
+            finalise.display_final_page(bucket)
 
 
 def markConsent():
@@ -284,6 +285,32 @@ def createDatabaseLink():
 
     return table
 
+@st.cache_resource
+def createBucketLink():
+    """
+    Set up a boto3 session to handle connection to the s3 bucket (if required).
+    The bucket name should be specified via Streamlit secrets; if none is provided, the
+    process of saving audio to a bucket will be skipped. Relies on credentials being
+    available in the current environment.
+    Returns:
+        bucket (s3.Bucket | None): the s3 bucket where the final audio will be stored,
+            or None if storage in a database is not required
+    """
+
+    if bucket_name := st.secrets.get("S3_BUCKET_NAME"):
+        bucket = boto3.client(
+            service_name = 's3',
+            region_name = st.secrets.get("AWS_DEFAULT_REGION"),
+            aws_access_key_id = st.secrets.get("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key = st.secrets.get("AWS_SECRET_ACCESS_KEY")
+        )
+        logger.info(f"audio will be saved to {bucket_name}\n")
+    else:
+        bucket = None
+        logger.info("No bucket details provided\n")
+
+    return bucket
+
 
 if __name__ == "__main__":
     logger = st.logger.get_logger("micronarratives")
@@ -293,6 +320,7 @@ if __name__ == "__main__":
     config_file = loadSettings()
     llm_prompts = createLLMPromptsFromFile(config_file)
     table = createDatabaseLink()
+    bucket = createBucketLink()
 
     # Initialise Streamlit session and LangSmith
     initialiseStreamlitSessionState(len(llm_prompts.personas))
@@ -319,6 +347,7 @@ if __name__ == "__main__":
             message_history,
             memory,
             table,
+            bucket,
         )
     else:
         requestConsent(llm_prompts.intro_and_consent)

@@ -91,7 +91,7 @@ def save_session_data(package, table):
         logger.error(f"Unable to write to {table.table_name}:\n\t{e}")
 
 
-def display_completion_page(table):
+def display_completion_page(bucket):
     """
     Displays the final scenario to the user.
     """
@@ -126,6 +126,13 @@ def display_completion_page(table):
     audio_value = st.audio_input("Start Recording")
 
     if(audio_value):
+        bucket.put_object(
+        Bucket=st.secrets.get("S3_BUCKET_NAME"),
+        Key=f"{st.session_state["session_id"]}/audio.wav",
+        Body=audio_value,
+        ContentType="audio/wav"
+        )
+        logger.info(f"audio was saved\n")
         st.session_state["Audio_Story"] = audio_value
         st.audio(audio_value)
 #     user_feedback = st.text_area(
