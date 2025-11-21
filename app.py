@@ -29,6 +29,7 @@ def stateAgent(
     memory,
     table,
     bucket,
+    transcribe,
 ):
     """
     Main flow function of the whole interaction -- keeps track of the system state and
@@ -95,9 +96,11 @@ def stateAgent(
                 chat_model, llm_prompts.adaptation_prompt_template
             )
         case "save":
-            finalise.saveScenario(message_history, table)
+            finalise.saveScenario(
+                message_history, table
+                )
         case "final":
-            finalise.display_final_page(bucket)
+            finalise.display_completion_page(bucket, transcribe)
 
 
 def markConsent():
@@ -312,6 +315,26 @@ def createBucketLink():
     return bucket
 
 
+@st.cache_resource
+def createTranscribeLink():
+    """
+    Create and cache a boto3 Transcribe client.
+    Uses Streamlit secrets for region + credentials, same as your S3 setup.
+    Returns:
+        transcribe (boto3 client): Amazon Transcribe client
+    """
+    region = st.secrets.get("AWS_DEFAULT_REGION", "us-east-1")
+
+    transcribe = boto3.client(
+        service_name="transcribe",
+        region_name=region,
+        aws_access_key_id=st.secrets.get("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=st.secrets.get("AWS_SECRET_ACCESS_KEY"),
+    )
+
+    logger.info(f"Transcribe client initialized in region {region}")
+    return transcribe
+
 if __name__ == "__main__":
     logger = st.logger.get_logger("micronarratives")
 
@@ -321,6 +344,7 @@ if __name__ == "__main__":
     llm_prompts = createLLMPromptsFromFile(config_file)
     table = createDatabaseLink()
     bucket = createBucketLink()
+    transcribe = createTranscribeLink()
 
     # Initialise Streamlit session and LangSmith
     initialiseStreamlitSessionState(len(llm_prompts.personas))
@@ -348,6 +372,7 @@ if __name__ == "__main__":
             memory,
             table,
             bucket,
+            transcribe,
         )
     else:
         requestConsent(llm_prompts.intro_and_consent)

@@ -1,5 +1,7 @@
 import datetime
 import json
+import time
+import requests
 
 import streamlit as st
 from langsmith import traceable
@@ -31,7 +33,8 @@ def saveScenario(message_history, table):
     else:
         logger.info("data not saved")
 
-    display_completion_page(table)
+    st.session_state["agentState"] = "final"
+    st.rerun()
     
 
 
@@ -91,7 +94,8 @@ def save_session_data(package, table):
         logger.error(f"Unable to write to {table.table_name}:\n\t{e}")
 
 
-def display_completion_page(bucket):
+
+def display_completion_page(bucket, transcribe):
     """
     Displays the final scenario to the user.
     """
@@ -105,36 +109,77 @@ def display_completion_page(bucket):
 
     st.markdown("**Here are some aspects of your story.**")
     labels = {
-    "aspirations": "Aspirations",
-    "activity": "Activity",
-    "location": "Location",
-    "time": "Time",
-    "companions": "Companions",
-    "feelings": "Feelings",
-    "takeaways": "Takeaways"
+        "aspirations": "Aspirations",
+        "activity": "Activity",
+        "location": "Location",
+        "time": "Time",
+        "companions": "Companions",
+        "feelings": "Feelings",
+        "takeaways": "Takeaways"
     }
 
     for field, content in st.session_state["summary_answers"].items():
         label = labels.get(field, field.capitalize())
         st.markdown(f"- **{label}**: {content}")
 
-    st.markdown("**Now that you’ve seen the bullet points, " 
-    "bring the story to life—tell it out loud in your own words, " 
-    "just like you would if you were sharing it with a friend or " 
-    "family member who’s never heard it before.**")
+    st.markdown(
+        "**Now that you’ve seen the bullet points, "
+        "bring the story to life—tell it out loud in your own words, "
+        "just like you would if you were sharing it with a friend or "
+        "family member who’s never heard it before.**"
+    )
 
     audio_value = st.audio_input("Start Recording")
 
-    if(audio_value):
+    if audio_value:
+        bucket_name = st.secrets.get("S3_BUCKET_NAME")
+        key = f"{st.session_state['session_id']}/audio.wav"
+
         bucket.put_object(
-        Bucket=st.secrets.get("S3_BUCKET_NAME"),
-        Key=f"{st.session_state["session_id"]}/audio.wav",
-        Body=audio_value,
-        ContentType="audio/wav"
+            Bucket=bucket_name,
+            Key=key,
+            Body=audio_value.getvalue(),
+            ContentType="audio/wav"
         )
-        logger.info(f"audio was saved\n")
+        logger.info("audio was saved")
         st.session_state["Audio_Story"] = audio_value
         st.audio(audio_value)
+
+        s3_uri = f"s3://{bucket_name}/{key}"
+        job_name = f"onefile-{int(time.time())}"
+
+        transcribe.start_transcription_job(
+            TranscriptionJobName=job_name,
+            LanguageCode="en-US",
+            MediaFormat="wav",
+            Media={"MediaFileUri": s3_uri},
+        )
+
+        text = None
+        while True:
+            job = transcribe.get_transcription_job(
+                TranscriptionJobName=job_name
+            )
+            status = job["TranscriptionJob"]["TranscriptionJobStatus"]
+
+            if status == "COMPLETED":
+                url = job["TranscriptionJob"]["Transcript"]["TranscriptFileUri"]
+                text = requests.get(url).json()["results"]["transcripts"][0]["transcript"]
+                break
+
+            if status == "FAILED":
+                raise RuntimeError(
+                    job["TranscriptionJob"].get("FailureReason", "Transcribe failed")
+                )
+
+            time.sleep(2)
+
+
+        st.session_state["Text_Story"] = text
+        logger.info("Transcription complete!")
+        st.write(text)
+
+
 #     user_feedback = st.text_area(
 #     "Now it's your turn to write a story:",
 #     value=st.session_state.get("user_feedback", "")
