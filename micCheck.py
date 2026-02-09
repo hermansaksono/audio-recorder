@@ -20,11 +20,19 @@ def checkmicrophone():
         st.write("Does this sound clear?")
         st.audio(audio_value)
         
-        # Add a visual separator for better UI
         st.divider()
 
-        # Confirmation button to advance state
-        if st.button("I can hear my voice", type="primary", use_container_width=True):
-            logger.info("Microphone check confirmed by user")
-            st.session_state["agentState"] = "customize"
-            st.rerun()
+        # Place columns INSIDE the function and INSIDE the audio check
+        col1, col2 = st.columns(2)
+
+        with col1:
+            if st.button("I cannot hear my voice", use_container_width=True):
+                logger.info("Microphone check rejected by user")
+                st.session_state["agentState"] = "final"
+                st.rerun()
+
+        with col2:
+            if st.button("I can hear my voice", type="primary", use_container_width=True):
+                logger.info("Microphone check confirmed by user")
+                st.session_state["agentState"] = "customize"
+                st.rerun()
