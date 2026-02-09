@@ -15,6 +15,7 @@ import conversation
 import customize
 import finalise
 import identify
+import micCheck
 import review
 import scenario
 from llm_config import LLMConfig
@@ -64,6 +65,8 @@ def stateAgent(
     match st.session_state["agentState"]:
         case "identify":
             identify.get_participant_id(llm_prompts)
+        case "microphoneCheck":
+            micCheck.checkmicrophone()
         case "customize":
             customize.get_customize_request(llm_prompts)
             logger.info("try to customize")
