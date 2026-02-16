@@ -1,9 +1,11 @@
 import datetime
+import io
 import json
 import time
 
 import requests
 import streamlit as st
+from pydub import AudioSegment
 from langsmith import traceable
 
 from utils import score_mappings
@@ -12,6 +14,18 @@ logger = st.logger.get_logger("micronarratives")
 # if you want to save the final scenario please make save = False
 # and uncomment the statements included below
 save = True
+
+
+def create_audio_preview(wav_bytes, max_seconds=10):
+    try:
+        audio = AudioSegment.from_file(io.BytesIO(wav_bytes), format="wav")
+        preview = audio[: max_seconds * 1000]
+        preview_buffer = io.BytesIO()
+        preview.export(preview_buffer, format="wav")
+        return preview_buffer.getvalue()
+    except Exception as exc:
+        logger.warning(f"Unable to create audio preview: {exc}")
+        return wav_bytes
 
 
 def saveScenario(message_history, table):
@@ -135,15 +149,18 @@ def display_completion_page(bucket, transcribe):
         bucket_name = st.secrets.get("S3_BUCKET_NAME")
         key = f"{st.session_state['session_id']}/audio.wav"
 
+        audio_bytes = audio_value.getvalue()
+
         bucket.put_object(
             Bucket=bucket_name,
             Key=key,
-            Body=audio_value.getvalue(),
+            Body=audio_bytes,
             ContentType="audio/wav"
         )
         logger.info("audio was saved")
         st.session_state["Audio_Story"] = audio_value
-        st.audio(audio_value)
+        preview_bytes = create_audio_preview(audio_bytes, max_seconds=10)
+        st.audio(preview_bytes, format="audio/wav")
 
         s3_uri = f"s3://{bucket_name}/{key}"
         job_name = f"onefile-{int(time.time())}"

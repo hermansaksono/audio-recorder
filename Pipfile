@@ -12,6 +12,7 @@ langchain-openai = "*"
 langsmith = "*"
 boto3 = "*"
 aws = "*"
+pydub = "*"
 
 [dev-packages]
 ruff = "*"
