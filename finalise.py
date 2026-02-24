@@ -5,6 +5,8 @@ import time
 
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
+from audio_recorder_streamlit import audio_recorder
 from pydub import AudioSegment
 from langsmith import traceable
 
@@ -143,13 +145,59 @@ def display_completion_page(bucket, transcribe):
         "family member who’s never heard it before.**"
     )
 
-    audio_value = st.audio_input("Start Recording")
+    # --- Visible 10-minute countdown timer ---
+    MAX_RECORDING_SECONDS = 10 * 60  # 10 minutes
+    components.html(
+        f"""
+        <div id="timer" style="font-size:1.4rem; font-weight:600; text-align:center;
+                                padding:8px 0; font-family:monospace;">
+            Time remaining: 10:00
+        </div>
+        <script>
+            let total = {MAX_RECORDING_SECONDS};
+            const el = document.getElementById('timer');
+            const tick = setInterval(() => {{
+                total--;
+                if (total <= 0) {{
+                    clearInterval(tick);
+                    el.textContent = '\u23f0 Time is up \u2014 please stop recording';
+                    el.style.color = 'red';
+                    return;
+                }}
+                const m = Math.floor(total / 60);
+                const s = total % 60;
+                el.textContent = 'Time remaining: ' + m + ':' + String(s).padStart(2, '0');
+            }}, 1000);
+        </script>
+        """,
+        height=50,
+    )
 
-    if audio_value:
+    # --- Audio recorder (auto-stops at 10 minutes) ---
+    # energy_threshold=(-1.0, 1.0) treats all audio as "not silent", so
+    # pause_threshold acts as a hard time cap instead of a silence detector.
+    # To enable silence-based auto-stop instead, change energy_threshold
+    # to e.g. 0.01 and pause_threshold to e.g. 30.0.
+    audio_bytes = audio_recorder(
+        pause_threshold=float(MAX_RECORDING_SECONDS),
+        energy_threshold=(-1.0, 1.0),
+        sample_rate=44100,
+        text="Click to record, click again to stop",
+    )
+
+    if audio_bytes:
+        # --- Server-side safety trim to 10 minutes (pydub) ---
+        MAX_DURATION_MS = MAX_RECORDING_SECONDS * 1000
+        audio_segment = AudioSegment.from_file(io.BytesIO(audio_bytes), format="wav")
+        if len(audio_segment) > MAX_DURATION_MS:
+            audio_segment = audio_segment[:MAX_DURATION_MS]
+            trimmed_buffer = io.BytesIO()
+            audio_segment.export(trimmed_buffer, format="wav")
+            audio_bytes = trimmed_buffer.getvalue()
+            logger.info("Audio trimmed to 10 minutes")
+
         bucket_name = st.secrets.get("S3_BUCKET_NAME")
         key = f"{st.session_state['session_id']}/audio.wav"
-
-        audio_bytes = audio_value.getvalue()
 
         bucket.put_object(
             Bucket=bucket_name,
@@ -158,7 +206,7 @@ def display_completion_page(bucket, transcribe):
             ContentType="audio/wav"
         )
         logger.info("audio was saved")
-        st.session_state["Audio_Story"] = audio_value
+        st.session_state["Audio_Story"] = audio_bytes
         preview_bytes = create_audio_preview(audio_bytes, max_seconds=10)
         st.audio(preview_bytes, format="audio/wav")
 
