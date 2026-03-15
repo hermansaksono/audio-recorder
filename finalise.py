@@ -151,39 +151,74 @@ def display_completion_page(bucket, transcribe):
         f"""
         <div id="timer" style="font-size:1.4rem; font-weight:600; text-align:center;
                                 padding:8px 0; font-family:monospace;">
-            Time remaining: 10:00
+            Time remaining: 10:00 (starts when recording starts)
         </div>
         <script>
-            let total = {MAX_RECORDING_SECONDS};
-            const el = document.getElementById('timer');
-            const tick = setInterval(() => {{
-                total--;
-                if (total <= 0) {{
-                    clearInterval(tick);
-                    el.textContent = '\u23f0 Time is up \u2014 please stop recording';
-                    el.style.color = 'red';
-                    return;
+            (() => {{
+                let total = {MAX_RECORDING_SECONDS};
+                let tick = null;
+                let started = false;
+                const el = document.getElementById('timer');
+
+                function render() {{
+                    const m = Math.floor(total / 60);
+                    const s = total % 60;
+                    el.textContent = 'Time remaining: ' + m + ':' + String(s).padStart(2, '0');
                 }}
-                const m = Math.floor(total / 60);
-                const s = total % 60;
-                el.textContent = 'Time remaining: ' + m + ':' + String(s).padStart(2, '0');
-            }}, 1000);
+
+                function startCountdown() {{
+                    if (started) return;
+                    started = true;
+                    render();
+                    tick = setInterval(() => {{
+                        total--;
+                        if (total <= 0) {{
+                            clearInterval(tick);
+                            el.textContent = '\u23f0 Time is up \u2014 please stop recording';
+                            el.style.color = 'red';
+                            return;
+                        }}
+                        render();
+                    }}, 1000);
+                }}
+
+                function attachToRecorderButton() {{
+                    const hostDoc = window.parent && window.parent.document ? window.parent.document : document;
+                    const buttons = Array.from(hostDoc.querySelectorAll('button'));
+                    const recorderButton = buttons.find((btn) =>
+                        (btn.innerText || '').includes('Click to record')
+                    );
+
+                    if (!recorderButton) return false;
+                    recorderButton.addEventListener('click', startCountdown, {{ once: true }});
+                    return true;
+                }}
+
+                if (!attachToRecorderButton()) {{
+                    const attachRetry = setInterval(() => {{
+                        if (attachToRecorderButton()) {{
+                            clearInterval(attachRetry);
+                        }}
+                    }}, 300);
+                }}
+            }})();
         </script>
         """,
         height=50,
     )
 
-    # --- Audio recorder (auto-stops at 10 minutes) ---
-    # energy_threshold=(-1.0, 1.0) treats all audio as "not silent", so
-    # pause_threshold acts as a hard time cap instead of a silence detector.
-    # To enable silence-based auto-stop instead, change energy_threshold
-    # to e.g. 0.01 and pause_threshold to e.g. 30.0.
-    audio_bytes = audio_recorder(
-        pause_threshold=float(MAX_RECORDING_SECONDS),
-        energy_threshold=(-1.0, 1.0),
-        sample_rate=44100,
-        text="Click to record, click again to stop",
-    )
+    # --- Audio recorder ---
+    # Auto-stops after 30 seconds of silence. The countdown timer above is the visual cue.
+    # The pydub trim below enforces the 10-minute limit on the backend.
+    st.caption("Press the microphone to start/stop recording.")
+    _, mic_col, _ = st.columns([1, 1, 1])
+    with mic_col:
+        audio_bytes = audio_recorder(
+            pause_threshold=30.0,       # stop after 30s of silence
+            energy_threshold=0.01,      # real silence detection
+            sample_rate=44100,
+            text="",
+        )
 
     if audio_bytes:
         # --- Server-side safety trim to 10 minutes (pydub) ---
