@@ -26,9 +26,7 @@ def checkmicrophone():
 
     st.caption("Use the microphone input below to record and review a short test.")
 
-    _, mic_col, _ = st.columns([1, 1, 1])
-    with mic_col:
-        audio_input = st.audio_input("Record yourself saying hello")
+    audio_input = st.audio_input("Record yourself saying hello")
 
     audio_value = audio_input.getvalue() if audio_input else None
 
@@ -36,10 +34,9 @@ def checkmicrophone():
         logger.info("Mic check audio received")
         st.write("Does this sound clear?")
         st.audio(audio_value, format="audio/wav")
-        
+
         st.divider()
 
-        # Place columns INSIDE the function and INSIDE the audio check
         col1, col2 = st.columns(2)
 
         with col1:
