@@ -67,6 +67,8 @@ def stateAgent(
             identify.get_participant_id(llm_prompts)
         case "microphoneCheck":
             micCheck.checkmicrophone()
+        case "micHelp":
+            micCheck.show_mic_help_page()
         case "customize":
             customize.get_customize_request(llm_prompts)
             logger.info("try to customize")
@@ -104,6 +106,14 @@ def stateAgent(
                 )
         case "final":
             finalise.display_completion_page(bucket, transcribe)
+        case "audioPreview":
+            finalise.display_audio_preview_page()
+        case "audioConfirmed":
+            finalise.display_save_congratulations_page(
+                message_history,
+                table,
+                transcribe,
+            )
 
 
 def markConsent():
@@ -210,6 +220,22 @@ def initialiseStreamlitSessionState(num_scenarios):
     # The text of the selected scenario (potentially with adaptations)
     if "final_scenario" not in st.session_state:
         st.session_state["final_scenario"] = ""
+
+    # Full recorded audio from the final storytelling step
+    if "Audio_Story" not in st.session_state:
+        st.session_state["Audio_Story"] = None
+
+    # First 10 seconds of the recorded audio for playback preview
+    if "Audio_Story_Preview" not in st.session_state:
+        st.session_state["Audio_Story_Preview"] = None
+
+    # Transcript generated from the final audio recording
+    if "Text_Story" not in st.session_state:
+        st.session_state["Text_Story"] = ""
+
+    # Whether the final transcription + save step has completed
+    if "_final_processing_complete" not in st.session_state:
+        st.session_state["_final_processing_complete"] = False
 
 @st.cache_resource
 def loadSettings():

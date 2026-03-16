@@ -3,6 +3,17 @@ from audio_recorder_streamlit import audio_recorder
 
 logger = st.logger.get_logger("micronarratives")
 
+
+def show_mic_help_page():
+    """
+    Display a placeholder help page for microphone troubleshooting.
+    """
+
+    st.markdown("#### Microphone Help")
+    st.write(
+        "this is where I will write instructions on how to deal with a mic that is not working"
+    )
+
 def checkmicrophone():
     """
     Prompts the user to record themselves saying "hello", plays it back,
@@ -38,7 +49,7 @@ def checkmicrophone():
         with col1:
             if st.button("I cannot hear my voice", use_container_width=True):
                 logger.info("Microphone check rejected by user")
-                st.session_state["agentState"] = "final"
+                st.session_state["agentState"] = "micHelp"
                 st.rerun()
 
         with col2:
