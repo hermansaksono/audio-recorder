@@ -1,5 +1,4 @@
 import streamlit as st
-from audio_recorder_streamlit import audio_recorder
 
 logger = st.logger.get_logger("micronarratives")
 
@@ -25,16 +24,13 @@ def checkmicrophone():
         "**Mic check:** Please record yourself saying *hello* to test the mic."
     )
 
-    st.caption("Press the microphone to start/stop recording.")
+    st.caption("Use the microphone input below to record and review a short test.")
 
     _, mic_col, _ = st.columns([1, 1, 1])
     with mic_col:
-        audio_value = audio_recorder(
-            pause_threshold=30.0,
-            energy_threshold=0.01,
-            sample_rate=44100,
-            text="",
-        )
+        audio_input = st.audio_input("Record yourself saying hello")
+
+    audio_value = audio_input.getvalue() if audio_input else None
 
     if audio_value:
         logger.info("Mic check audio received")
