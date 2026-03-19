@@ -132,12 +132,6 @@ def display_completion_page(bucket, transcribe):
     "Please tell it out loud in your own words, " 
     "just like you would if you were sharing it with a friend or " 
     "family member who’s never heard it before.**")
-    st.markdown(
-        "**Now that you’ve seen the bullet points, "
-        "bring the story to life—tell it out loud in your own words, "
-        "just like you would if you were sharing it with a friend or "
-        "family member who’s never heard it before.**"
-    )
 
     MAX_RECORDING_SECONDS = 10 * 60  # 10 minutes
 
