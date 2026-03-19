@@ -1,7 +1,4 @@
 import streamlit as st
-from streamlit_feedback import streamlit_feedback
-
-import scenario
 from utils import score_mappings
 
 logger = st.logger.get_logger("micronarratives")
@@ -29,7 +26,8 @@ def reviewData(
 
     num_scenarios = len(st.session_state["generated_scenarios"])
 
-    # # If a scenario hasn't been selected yet, show all scenarios and feedback mechanisms
+    # # If a scenario hasn't been selected yet, show all scenarios and
+    # # feedback mechanisms
     # if st.session_state["selected_scenario_index"] is None:
     st.markdown("#### Review these examples to help you tell your own story")
     st.divider()
@@ -55,9 +53,11 @@ def reviewData(
     #         )
     #         scenario.scenario_selection(popover, index)
 
-    # # and finally, assuming we have selected a scenario, let's move to the final state!
-    # # Note that we ensured that the screen is free for any new content now as people had
-    # # to click to select a scenario -- streamlit is starting with a fresh page
+    # # and finally, assuming we have selected a scenario, let's move to the
+    # # final state!
+    # # Note that we ensured that the screen is free for any new content now as
+    # # people had to click to select a scenario -- streamlit is starting with a
+    # # fresh page
     # else:
         # great, we have a scenario selected, and all the key information is now in
         # t.session_state['scenario_package'], created in the

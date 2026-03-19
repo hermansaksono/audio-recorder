@@ -10,7 +10,8 @@ def show_mic_help_page():
 
     st.markdown("#### Microphone Help")
     st.write(
-        "this is where I will write instructions on how to deal with a mic that is not working"
+        "this is where I will write instructions on how to deal with a mic that is "
+        "not working"
     )
 
     st.markdown(
@@ -74,7 +75,9 @@ def checkmicrophone():
                 st.rerun()
 
         with col2:
-            if st.button("I can hear my voice", type="primary", use_container_width=True):
+            if st.button(
+                "I can hear my voice", type="primary", use_container_width=True
+            ):
                 logger.info("Microphone check confirmed by user")
                 st.session_state["agentState"] = "customize"
                 st.rerun()

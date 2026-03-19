@@ -1,6 +1,7 @@
 import threading
 
 import streamlit as st
+
 from finalise_services import (
     process_recorded_audio,
     save_session_data,
@@ -70,7 +71,9 @@ def display_audio_preview_page():
             st.rerun()
 
     with col2:
-        if st.button("I can hear my recording", type="primary", use_container_width=True):
+        if st.button(
+            "I can hear my recording", type="primary", use_container_width=True
+        ):
             logger.info("Audio preview confirmed by user")
             st.session_state["agentState"] = "audioConfirmed"
             st.rerun()
@@ -83,7 +86,9 @@ def display_save_congratulations_page(message_history, table, transcribe):
     """
 
     if not st.session_state.get("_final_processing_complete", False):
-        with st.spinner("Finalizing your story, generating the transcript, and saving everything..."):
+        with st.spinner(
+            "Finalizing your story, generating the transcript, and saving everything..."
+        ):
             transcribe_saved_audio(transcribe)
             if table:
                 package = summarise_session_data(message_history)
@@ -128,16 +133,19 @@ def display_completion_page(bucket, transcribe):
         label = labels.get(field, field.capitalize())
         st.markdown(f"- **{label}**: {content}")
 
-    st.markdown("**Now that you have the storytelling points, you can bring your story to life. " 
-    "Please tell it out loud in your own words, " 
-    "just like you would if you were sharing it with a friend or " 
-    "family member who’s never heard it before.**")
+    st.markdown(
+        "**Now that you have the storytelling points, you can bring your story to "
+        "life. Please tell it out loud in your own words, just like you would if "
+        "you were sharing it with a friend or family member who’s never heard it "
+        "before.**"
+    )
 
     MAX_RECORDING_SECONDS = 10 * 60  # 10 minutes
 
     st.caption(
-        "Use the microphone input below to record your story. When you stop recording, "
-        "the app will save the first 10 seconds as a preview and trim anything over 10 minutes."
+        "Use the microphone input below to record your story. When you stop "
+        "recording, the app will save the first 10 seconds as a preview and trim "
+        "anything over 10 minutes."
     )
     audio_input = st.audio_input("Record your story")
     audio_bytes = audio_input.getvalue() if audio_input else None
