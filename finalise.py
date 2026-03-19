@@ -63,6 +63,9 @@ def display_audio_preview_page():
     with col1:
         if st.button("I cannot hear my recording", use_container_width=True):
             logger.info("Audio preview rejected by user")
+            st.session_state["previousAgentState"] = st.session_state.get(
+                "agentState", "audioPreview"
+            )
             st.session_state["agentState"] = "micHelp"
             st.rerun()
 

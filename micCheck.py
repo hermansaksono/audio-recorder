@@ -13,6 +13,31 @@ def show_mic_help_page():
         "this is where I will write instructions on how to deal with a mic that is not working"
     )
 
+    st.markdown(
+        """
+        <style>
+        div[data-testid="stButton"] > button {
+            background-color: #dc2626 !important;
+            color: white !important;
+            border: 1px solid #b91c1c !important;
+        }
+        div[data-testid="stButton"] > button:hover {
+            background-color: #b91c1c !important;
+            border-color: #991b1b !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    previous_state = st.session_state.get("previousAgentState", "microphoneCheck")
+    if previous_state == "micHelp":
+        previous_state = "microphoneCheck"
+
+    if st.button("Try Again", use_container_width=True):
+        st.session_state["agentState"] = previous_state
+        st.rerun()
+
 def checkmicrophone():
     """
     Prompts the user to record themselves saying "hello", plays it back,
@@ -42,6 +67,9 @@ def checkmicrophone():
         with col1:
             if st.button("I cannot hear my voice", use_container_width=True):
                 logger.info("Microphone check rejected by user")
+                st.session_state["previousAgentState"] = st.session_state.get(
+                    "agentState", "microphoneCheck"
+                )
                 st.session_state["agentState"] = "micHelp"
                 st.rerun()
 
