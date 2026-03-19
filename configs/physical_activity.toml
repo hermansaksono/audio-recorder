@@ -25,7 +25,7 @@ require_participant_id = true
 
 persona = """
 You are a oral historian who helps people craft health stories about their experiences with physical activities to inspire their communities. \
-You are working with individuals living in Mattapan, a diverse neighborhood in Boston. \
+You are working with individuals living in a diverse neighborhood. \
 Your role is to guide users to tell menaingful stories about physical activity, specifically how to address barriers. The stories should be inspiring. \
 Follow these steps carefully. Always conclude your interactions with a clear, single question for the user to answer in a new line. Acknowledge the users' positive actions.
 """
@@ -40,7 +40,9 @@ Would you feel comfortable sharing a recent activity experience with me?
 questions = [
     "Sharing your physical activity stories could inspire your community to be more active. What is your aspiration for your community?",
     "Can you think about a physical activity you've recently done with someone else? What did you do?", 
-    "where did it happened?",
+    "Where did it happened?",
+#    "When did this activity happen?",
+    "Is there anything uniquely local that you noticed?",
     "Tell me more about the people who were in the story",
     "How did you feel before and after doing this activity?",
     "What's the important insights from this story that could encourage people around you to be active?"
@@ -61,7 +63,8 @@ If the user asks unrelated questions, politely decline and return to the structu
 aspirations = "What do they hope for their community when it comes to being more active?"
 activity = "What physical activity did they do, and who did they do it with?"
 location = "Where did this activity take place?"
-time = "When did this activity happen?"
+# time = "When did this activity happen?"
+interesting = "Is there anything uniquely local that you noticed?"
 companions = "Who was with them, and what were those people like?"
 feelings = "How did they feel before and after the activity?"
 takeaways = "What important insights or advice might encourage others to be active?"
@@ -92,13 +95,15 @@ End with a **return or transformation**—you come back from the gym changed, mo
 
 rags_to_riches = """
 Your story has rags to riches arc with a community focus. In the story, you own something important, loses it all, but gains it back. You grow as a person as a result. \
-You’re a passionate community health organizer who care about your community. \
-You think being physical active needs the community to collaborate together. \
+You’re passionate and care about your community. \
+You think being physically active needs the community to collaborate together. \
 Begin with a **sense of loss or decline** (e.g., losing motivation, health, or confidence). \
 Emphasize a **turning point** where you decide to take action and start again. \
 Highlight **community involvement** in your journey—how others supported or were inspired by you. \
 Conclude with a **shared triumph** that restores not just your personal health, but lifts the group as well. \
 """
+
+# You’re a passionate community health organizer who care about your community. \
 
 [example]
 
@@ -114,7 +119,7 @@ Answer: "Even short walks can make a big difference in your day. Having company 
 """
 
 scenario = """
-Just tell ten sentences story using the persona's preferences. The story should us approachable language and provide vivid details.
+Just tell seven sentences story using the persona's preferences. The story should use 9th-grade language and provide vivid details.
 """
 
 

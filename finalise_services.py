@@ -9,8 +9,6 @@ import streamlit as st
 from langsmith import traceable
 from pydub import AudioSegment
 
-from utils import score_mappings
-
 logger = st.logger.get_logger("micronarratives")
 
 
@@ -39,15 +37,14 @@ def summarise_session_data(message_history):
 
     # Combine scenario text and all user feedback (converted to numerical where
     # appropriate) into single dataset
-    scenarios_with_feedback = [
-        {"text": scenario, "feedback": feedback, "judgement": judgement}
-        for scenario, feedback, judgement in zip(
-            st.session_state["generated_scenarios"],
-            [score_mappings.get(fb) for fb in st.session_state["scenario_feedback"]],
-            st.session_state["scenario_judgement"],
-            strict=True,
-        )
-    ]
+    #scenarios_with_feedback = [
+    #   for scenario, feedback, judgement in zip(
+    #    st.session_state["generated_scenarios"],
+    #        [score_mappings.get(fb) for fb in st.session_state["scenario_feedback"]],
+    #        st.session_state["scenario_judgement"],
+    #        strict=True,
+    #    )
+    #]
 
     # Note: two different formats of the message history are saved, to better suit
     # different analysis methods after data collection

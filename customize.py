@@ -15,7 +15,8 @@ def display_customize_page(text, editable):
         editable (bool): Whether the pre-filled ID should be editable
 
     Returns:
-        str: The customization request entered by the user or an empty string if none provided.
+        str: The customization request entered by the user or an empty string if
+            none provided.
     """
     st.markdown("#### Customization Request")
 
@@ -25,8 +26,8 @@ def display_customize_page(text, editable):
             st.write(text)
 
         participant_id = st.text_input(
-            "Enter your customization request \n\n "
-            "For example: 'Please make my chatbot more cheerful'",
+            "You can customize your chatbot. How would you like the chatbot to "
+            "talk? \n\n For example: 'Please make my chatbot more cheerful/serious'",
             value="",
             key="participant_customization_request",
             disabled=not editable,
