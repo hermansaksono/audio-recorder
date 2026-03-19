@@ -15,6 +15,7 @@ import conversation
 import customize
 import finalise
 import identify
+import micCheck
 import review
 import scenario
 from llm_config import LLMConfig
@@ -28,6 +29,8 @@ def stateAgent(
     message_history,
     memory,
     table,
+    bucket,
+    transcribe,
 ):
     """
     Main flow function of the whole interaction -- keeps track of the system state and
@@ -62,6 +65,10 @@ def stateAgent(
     match st.session_state["agentState"]:
         case "identify":
             identify.get_participant_id(llm_prompts)
+        case "microphoneCheck":
+            micCheck.checkmicrophone()
+        case "micHelp":
+            micCheck.show_mic_help_page()
         case "customize":
             customize.get_customize_request(llm_prompts)
             logger.info("try to customize")
@@ -94,9 +101,19 @@ def stateAgent(
                 chat_model, llm_prompts.adaptation_prompt_template
             )
         case "save":
-            finalise.saveScenario(message_history, table)
+            finalise.saveScenario(
+                message_history, table
+                )
         case "final":
-            finalise.display_final_page()
+            finalise.display_completion_page(bucket, transcribe)
+        case "audioPreview":
+            finalise.display_audio_preview_page()
+        case "audioConfirmed":
+            finalise.display_save_congratulations_page(
+                message_history,
+                table,
+                transcribe,
+            )
 
 
 def markConsent():
@@ -204,6 +221,22 @@ def initialiseStreamlitSessionState(num_scenarios):
     if "final_scenario" not in st.session_state:
         st.session_state["final_scenario"] = ""
 
+    # Full recorded audio from the final storytelling step
+    if "Audio_Story" not in st.session_state:
+        st.session_state["Audio_Story"] = None
+
+    # First 10 seconds of the recorded audio for playback preview
+    if "Audio_Story_Preview" not in st.session_state:
+        st.session_state["Audio_Story_Preview"] = None
+
+    # Transcript generated from the final audio recording
+    if "Text_Story" not in st.session_state:
+        st.session_state["Text_Story"] = ""
+
+    # Whether the final transcription + save step has completed
+    if "_final_processing_complete" not in st.session_state:
+        st.session_state["_final_processing_complete"] = False
+
 @st.cache_resource
 def loadSettings():
     """
@@ -284,6 +317,52 @@ def createDatabaseLink():
 
     return table
 
+@st.cache_resource
+def createBucketLink():
+    """
+    Set up a boto3 session to handle connection to the s3 bucket (if required).
+    The bucket name should be specified via Streamlit secrets; if none is provided, the
+    process of saving audio to a bucket will be skipped. Relies on credentials being
+    available in the current environment.
+    Returns:
+        bucket (s3.Bucket | None): the s3 bucket where the final audio will be stored,
+            or None if storage in a database is not required
+    """
+
+    if bucket_name := st.secrets.get("S3_BUCKET_NAME"):
+        bucket = boto3.client(
+            service_name = 's3',
+            region_name = st.secrets.get("AWS_DEFAULT_REGION"),
+            aws_access_key_id = st.secrets.get("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key = st.secrets.get("AWS_SECRET_ACCESS_KEY")
+        )
+        logger.info(f"audio will be saved to {bucket_name}\n")
+    else:
+        bucket = None
+        logger.info("No bucket details provided\n")
+
+    return bucket
+
+
+@st.cache_resource
+def createTranscribeLink():
+    """
+    Create and cache a boto3 Transcribe client.
+    Uses Streamlit secrets for region + credentials, same as your S3 setup.
+    Returns:
+        transcribe (boto3 client): Amazon Transcribe client
+    """
+    region = st.secrets.get("AWS_DEFAULT_REGION", "us-east-1")
+
+    transcribe = boto3.client(
+        service_name="transcribe",
+        region_name=region,
+        aws_access_key_id=st.secrets.get("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=st.secrets.get("AWS_SECRET_ACCESS_KEY"),
+    )
+
+    logger.info(f"Transcribe client initialized in region {region}")
+    return transcribe
 
 if __name__ == "__main__":
     logger = st.logger.get_logger("micronarratives")
@@ -293,6 +372,8 @@ if __name__ == "__main__":
     config_file = loadSettings()
     llm_prompts = createLLMPromptsFromFile(config_file)
     table = createDatabaseLink()
+    bucket = createBucketLink()
+    transcribe = createTranscribeLink()
 
     # Initialise Streamlit session and LangSmith
     initialiseStreamlitSessionState(len(llm_prompts.personas))
@@ -319,6 +400,8 @@ if __name__ == "__main__":
             message_history,
             memory,
             table,
+            bucket,
+            transcribe,
         )
     else:
         requestConsent(llm_prompts.intro_and_consent)

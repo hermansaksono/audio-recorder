@@ -1,10 +1,12 @@
-import datetime
-import json
+import threading
 
 import streamlit as st
-from langsmith import traceable
-
-from utils import score_mappings
+from finalise_services import (
+    process_recorded_audio,
+    save_session_data,
+    summarise_session_data,
+    transcribe_saved_audio,
+)
 
 logger = st.logger.get_logger("micronarratives")
 # if you want to save the final scenario please make save = False
@@ -21,77 +23,85 @@ def saveScenario(message_history, table):
         table (DynamoDB.Table | None): a DynamoDB table where the data should be stored
     """
 
-    # if st.session_state.get("save") and table:
+    st.session_state["agentState"] = "final"
+
+    # Save in the background so the final page can appear immediately.
     if table:
         package = summarise_session_data(message_history)
-        save_session_data(package, table)
-        logger.info("data saved")
-        # st.session_state.agentState = "final"
-        # st.rerun()
+        save_thread = threading.Thread(
+            target=save_session_data,
+            args=(package, table),
+            daemon=True,
+        )
+        save_thread.start()
+        logger.info("Data save started in background")
     else:
         logger.info("data not saved")
 
-    display_completion_page(table)
-    
+    st.rerun()
 
 
-@traceable
-def summarise_session_data(message_history):
+def display_audio_preview_page():
     """
-    Collates a summary of all the data from this interaction with a user. If LangSmith
-    is enabled, the contents of the summarised package will be stored in LangSmith.
-    Args:
-        message_history (StreamlitChatMessageHistory): chat history
-    Returns:
-        dict: data package to be placed in the database
+    Displays a separate page with a 10-second preview of the user's recording,
+    and asks whether they can hear the playback before proceeding to save.
     """
 
-    # Combine scenario text and all user feedback (converted to numerical where
-    # appropriate) into single dataset
-    scenarios_with_feedback = [
-        {"text": scenario, "feedback": feedback, "judgement": judgement}
-        for scenario, feedback, judgement in zip(
-            st.session_state["generated_scenarios"],
-            [score_mappings.get(fb) for fb in st.session_state["scenario_feedback"]],
-            st.session_state["scenario_judgement"],
-            strict=True,
-        )
-    ]
+    st.markdown("#### Audio Preview")
 
-    # Note: two different formats of the message history are saved, to better suit
-    # different analysis methods after data collection
-    scenario_package = {
-        "session_id": str(st.session_state["session_id"]),
-        "participant_id": str(st.session_state["participant_id"]),
-        "langsmith_session_id": str(st.session_state["langsmith_run_id"]),
-        "completion_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "all_scenario":st.session_state["generated_scenarios"],
-        "summary_answers": st.session_state["summary_answers"],
-        "chat_history": [(m.type, m.content) for m in message_history.messages],
-        "chat_history_single_string": str(message_history),
-        # "user_story": st.session_state.get("user_feedback", ""),
-    }
+    if st.session_state.get("Audio_Story_Preview"):
+        st.write("Here are the first 10 seconds of your recording.")
+        st.audio(st.session_state["Audio_Story_Preview"], format="audio/wav")
+    else:
+        st.write("No audio preview is available yet.")
 
-    logger.info(f"Prepared scenario package: {json.dumps(scenario_package, indent=4)}")
+    st.divider()
+    st.write("Can you hear your recording?")
 
-    return scenario_package
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("I cannot hear my recording", use_container_width=True):
+            logger.info("Audio preview rejected by user")
+            st.session_state["previousAgentState"] = st.session_state.get(
+                "agentState", "audioPreview"
+            )
+            st.session_state["agentState"] = "micHelp"
+            st.rerun()
+
+    with col2:
+        if st.button("I can hear my recording", type="primary", use_container_width=True):
+            logger.info("Audio preview confirmed by user")
+            st.session_state["agentState"] = "audioConfirmed"
+            st.rerun()
 
 
-def save_session_data(package, table):
+def display_save_congratulations_page(message_history, table, transcribe):
     """
-    Saves the session data to a connected database.
-    Args:
-        package (dict): a dict of data to be stored in the database
-        table (DynamoDB.Table): a DynamoDB table where the data should be stored
+    Transcribes the saved audio, saves the session data, and displays a
+    congratulations message.
     """
 
-    try:
-        table.put_item(Item=package)
-    except Exception as e:
-        logger.error(f"Unable to write to {table.table_name}:\n\t{e}")
+    if not st.session_state.get("_final_processing_complete", False):
+        with st.spinner("Finalizing your story, generating the transcript, and saving everything..."):
+            transcribe_saved_audio(transcribe)
+            if table:
+                package = summarise_session_data(message_history)
+                save_session_data(package, table)
+                logger.info("Data saved after transcription")
+            else:
+                logger.info("Data not saved")
+            st.session_state["_final_processing_complete"] = True
+            st.rerun()
+
+    st.markdown("## :tada: Congratulations!")
+    st.markdown(
+        "You have finished this experience! Thank you for sharing your story."
+    )
 
 
-def display_completion_page(table):
+
+def display_completion_page(bucket, transcribe):
     """
     Displays the final scenario to the user.
     """
@@ -105,13 +115,13 @@ def display_completion_page(table):
 
     st.markdown("**Here are some aspects of your story.**")
     labels = {
-    "aspirations": "Aspirations",
-    "activity": "Activity",
-    "location": "Location",
-    "time": "Time",
-    "companions": "Companions",
-    "feelings": "Feelings",
-    "takeaways": "Takeaways"
+        "aspirations": "Aspirations",
+        "activity": "Activity",
+        "location": "Location",
+        "time": "Time",
+        "companions": "Companions",
+        "feelings": "Feelings",
+        "takeaways": "Takeaways"
     }
 
     for field, content in st.session_state["summary_answers"].items():
@@ -122,6 +132,30 @@ def display_completion_page(table):
     "Please tell it out loud in your own words, " 
     "just like you would if you were sharing it with a friend or " 
     "family member who’s never heard it before.**")
+    st.markdown(
+        "**Now that you’ve seen the bullet points, "
+        "bring the story to life—tell it out loud in your own words, "
+        "just like you would if you were sharing it with a friend or "
+        "family member who’s never heard it before.**"
+    )
+
+    MAX_RECORDING_SECONDS = 10 * 60  # 10 minutes
+
+    st.caption(
+        "Use the microphone input below to record your story. When you stop recording, "
+        "the app will save the first 10 seconds as a preview and trim anything over 10 minutes."
+    )
+    audio_input = st.audio_input("Record your story")
+    audio_bytes = audio_input.getvalue() if audio_input else None
+
+    if audio_bytes:
+        process_recorded_audio(
+            audio_bytes,
+            bucket,
+            MAX_RECORDING_SECONDS,
+        )
+
+
 #     user_feedback = st.text_area(
 #     "Now it's your turn to write a story:",
 #     value=st.session_state.get("user_feedback", "")
