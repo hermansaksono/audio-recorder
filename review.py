@@ -1,4 +1,5 @@
 import streamlit as st
+
 from utils import score_mappings
 
 logger = st.logger.get_logger("micronarratives")

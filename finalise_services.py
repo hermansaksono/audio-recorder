@@ -9,8 +9,6 @@ import streamlit as st
 from langsmith import traceable
 from pydub import AudioSegment
 
-from utils import score_mappings
-
 logger = st.logger.get_logger("micronarratives")
 
 
