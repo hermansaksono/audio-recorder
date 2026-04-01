@@ -45,6 +45,22 @@ def checkmicrophone():
     and provides a button to proceed once verified.
     """
 
+    # Fix: on narrow screens (e.g. iOS Safari), the audio input widget's container
+    # has a fixed height and overflow:hidden, which clips the error message text
+    # when it wraps to multiple lines. This override allows the container to grow.
+    st.markdown(
+        """
+        <style>
+        [data-testid="stAudioInput"] .e18uw4vz1 {
+            height: auto !important;
+            min-height: var(--sizes-largestElementHeight, 80px);
+            overflow: visible !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     st.markdown("#### Microphone Check")
     st.markdown(
         "**Mic check:** Please record yourself saying *hello* to test the mic."
