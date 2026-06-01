@@ -62,7 +62,7 @@ def display_audio_preview_page():
     col1, col2 = st.columns(2)
 
     with col1:
-        if st.button("I cannot hear my recording", use_container_width=True):
+        if st.button("No, I cannot hear my recording", use_container_width=True):
             logger.info("Audio preview rejected by user")
             st.session_state["previousAgentState"] = st.session_state.get(
                 "agentState", "audioPreview"
@@ -72,7 +72,7 @@ def display_audio_preview_page():
 
     with col2:
         if st.button(
-            "I can hear my recording", type="primary", use_container_width=True
+            "Yes, I can hear my recording", type="primary", use_container_width=True
         ):
             logger.info("Audio preview confirmed by user")
             st.session_state["agentState"] = "audioConfirmed"

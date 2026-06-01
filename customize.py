@@ -18,7 +18,7 @@ def display_customize_page(text, editable):
         str: The customization request entered by the user or an empty string if
             none provided.
     """
-    st.markdown("#### Customization Request")
+    st.markdown("#### Personalize your chatbot")
 
     # Use a form to require explicit submission
     with st.form(key="participant_form"):
@@ -26,8 +26,8 @@ def display_customize_page(text, editable):
             st.write(text)
 
         participant_id = st.text_input(
-            "You can customize your chatbot. How would you like the chatbot to "
-            "talk? \n\n For example: 'Please make my chatbot more cheerful/serious'",
+            "You can customize your chatbot. How would you like the chatbot to talk?\n"
+            'For example:\n\n"Please make my chatbot more cheerful"',
             value="",
             key="participant_customization_request",
             disabled=not editable,

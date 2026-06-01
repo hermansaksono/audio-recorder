@@ -15,23 +15,6 @@ def show_mic_help_page():
         "not working"
     )
 
-    st.markdown(
-        """
-        <style>
-        div[data-testid="stButton"] > button {
-            background-color: #dc2626 !important;
-            color: white !important;
-            border: 1px solid #b91c1c !important;
-        }
-        div[data-testid="stButton"] > button:hover {
-            background-color: #b91c1c !important;
-            border-color: #991b1b !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
     previous_state = st.session_state.get("previousAgentState", "microphoneCheck")
     if previous_state == "micHelp":
         previous_state = "microphoneCheck"
@@ -110,7 +93,7 @@ def checkmicrophone():
         col1, col2 = st.columns(2)
 
         with col1:
-            if st.button("I cannot hear my voice", use_container_width=True):
+            if st.button("No, I cannot hear my voice", use_container_width=True):
                 logger.info("Microphone check rejected by user")
                 st.session_state["previousAgentState"] = st.session_state.get(
                     "agentState", "microphoneCheck"
@@ -120,7 +103,7 @@ def checkmicrophone():
 
         with col2:
             if st.button(
-                "I can hear my voice", type="primary", use_container_width=True
+                "Yes, I can hear my voice", type="primary", use_container_width=True
             ):
                 logger.info("Microphone check confirmed by user")
                 st.session_state["agentState"] = "customize"
