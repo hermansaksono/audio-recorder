@@ -8,10 +8,11 @@
 
 intro_and_consent = """## Welcome to our Physical Activity Storytelling Chatbot.
 
-This chatbot will help you craft inspiring stories about your physical activity experiences. Stories that can motivate your community. \
-There will be about 7 questions and may take 5 minutes. You can share your experiences without providing personal details. \
-\
-At the end, I will provide you with three example stories to help you tell the story that you like. \
+This chatbot will help you craft stories about your physical activity experiences.
+
+It will ask about 7 questions and may take 5 minutes to answer. You can share your experiences without providing personal details.
+Then, it will provide you with three example stories to help you tell the story that you like.
+Finally, you can audio-record your own story.
 Please do not share personal or sensitive information.
 
 To continue, please confirm that you have read and understood this information.
