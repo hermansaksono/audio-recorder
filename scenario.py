@@ -78,7 +78,7 @@ def generate_scenarios(llm_prompts, chat_model, summary_answers, bar):
         )
         bar.progress(
             (count + 1) / len(llm_prompts.personas),
-            f"Processed scenario {count + 1} of {len(llm_prompts.personas)}",
+            f"Processed example story {count + 1} of {len(llm_prompts.personas)}",
         )
 
     return scenarios
@@ -98,7 +98,7 @@ def generate_scenarios_with_progress(llm_prompts, chat_model, summary_answers):
             "Let me try to generate three examples to help you tell your own story. \n"
             "See you if you like any of these! "
         )
-        progress_text = "Processing your scenarios"
+        progress_text = "Processing your example stories"
         bar = st.progress(0, text=progress_text)
 
         scenarios = generate_scenarios(llm_prompts, chat_model, summary_answers, bar)
@@ -280,7 +280,7 @@ def update_scenario_with_progress(
         str: text of the revised scenario
     """
 
-    with container, st.spinner("Working on your updated scenario 🧐"):
+    with container, st.spinner("Working on your updated example story 🧐"):
         updated_scenario = update_scenario(
             chat_model, adaptation_prompt_template, chat_input
         )
