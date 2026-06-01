@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 
 logger = st.logger.get_logger("micronarratives")
 
@@ -45,9 +46,6 @@ def checkmicrophone():
     and provides a button to proceed once verified.
     """
 
-    # Fix: on narrow screens (e.g. iOS Safari), the audio input widget's container
-    # has a fixed height and overflow:hidden, which clips the error message text
-    # when it wraps to multiple lines. This override allows the container to grow.
     st.markdown(
         """
         <style>
@@ -59,6 +57,36 @@ def checkmicrophone():
         </style>
         """,
         unsafe_allow_html=True,
+    )
+
+    components.html(
+        """
+        <script>
+        const doc = window.parent.document;
+        const observer = new MutationObserver(() => {
+            const container = doc.querySelector(
+                '[data-testid="stAudioInput"]'
+            );
+            if (!container) return;
+            const customMsg =
+                'Microphone access was denied. Please allow '
+                + 'microphone permissions in your browser '
+                + 'settings and reload the page.';
+            const spans = container.querySelectorAll('span');
+            spans.forEach(span => {
+                const text = span.textContent.trim().toLowerCase();
+                if (text.includes('an error has occurred')
+                    || text.includes('this app would like to use your microphone')) {
+                    span.textContent = customMsg;
+                    const link = span.parentElement.querySelector('a');
+                    if (link) link.remove();
+                }
+            });
+        });
+        observer.observe(doc.body, { childList: true, subtree: true });
+        </script>
+        """,
+        height=0,
     )
 
     st.markdown("#### Microphone Check")
