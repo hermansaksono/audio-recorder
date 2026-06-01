@@ -111,6 +111,9 @@ def display_completion_page(bucket, transcribe):
     Displays the final scenario to the user.
     """
     generated_scenarios = st.session_state["generated_scenarios"]
+
+    st.markdown("**Please review these three example stories.**")
+
     scenario_columns = st.columns(len(generated_scenarios))
 
     for col_index, column in enumerate(scenario_columns):
