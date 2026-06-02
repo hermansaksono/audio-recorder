@@ -48,10 +48,14 @@ def display_audio_preview_page():
     and asks whether they can hear the playback before proceeding to save.
     """
 
-    st.markdown("#### Audio Preview")
+    st.markdown("#### You have recorded your own story")
 
     if st.session_state.get("Audio_Story_Preview"):
-        st.write("Here are the first 10 seconds of your recording.")
+        st.markdown(
+            "Play your story below to make sure it sounds fine. "
+            "This preview is just the first 10 seconds of your recording. "
+            "The full recording is saved, don't worry."
+        )
         st.audio(st.session_state["Audio_Story_Preview"], format="audio/wav")
     else:
         st.write("No audio preview is available yet.")
@@ -72,7 +76,7 @@ def display_audio_preview_page():
 
     with col2:
         if st.button(
-            "Yes, I can hear my recording", type="primary", use_container_width=True
+            "Yes, I can hear my recording", use_container_width=True
         ):
             logger.info("Audio preview confirmed by user")
             st.session_state["agentState"] = "audioConfirmed"
@@ -87,7 +91,7 @@ def display_save_congratulations_page(message_history, table, transcribe):
 
     if not st.session_state.get("_final_processing_complete", False):
         with st.spinner(
-            "Finalizing your story, generating the transcript, and saving everything..."
+            "Saving your story..."
         ):
             transcribe_saved_audio(transcribe)
             if table:
@@ -145,12 +149,14 @@ def display_completion_page(bucket, transcribe):
 
     MAX_RECORDING_SECONDS = 10 * 60  # 10 minutes
 
-    st.caption(
-        "Use the microphone input below to record your story. When you stop "
-        "recording, the app will save the first 10 seconds as a preview and trim "
-        "anything over 10 minutes."
+    st.markdown(
+        "Click on the microphone icon below to record your story. "
+        "When you are done, click on the button again.  \n"
+        "Your web browser may ask for permission to use the mic. "
+        'Please click "Allow".  \n'
+        "*Note: recording will automatically stop after 10 minutes.*"
     )
-    audio_input = st.audio_input("Record your story")
+    audio_input = st.audio_input("", label_visibility="collapsed")
     audio_bytes = audio_input.getvalue() if audio_input else None
 
     if audio_bytes:

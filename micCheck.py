@@ -74,12 +74,15 @@ def checkmicrophone():
 
     st.markdown("#### Microphone Check")
     st.markdown(
-        "**Mic check:** Please record yourself saying *hello* to test the mic."
+        "Before we start, we need to make sure the mic is working "
+        "because you will use it later.  \n"
+        "Click on the mic button below and say *hello*. "
+        "Then, follow the next instructions.  \n"
+        '*Note: your web browser may ask for permission to use the mic. '
+        'Please click "Allow".*'
     )
 
-    st.caption("Use the microphone input below to record and review a short test.")
-
-    audio_input = st.audio_input("Record yourself saying hello")
+    audio_input = st.audio_input("", label_visibility="collapsed")
 
     audio_value = audio_input.getvalue() if audio_input else None
 
@@ -103,7 +106,7 @@ def checkmicrophone():
 
         with col2:
             if st.button(
-                "Yes, I can hear my voice", type="primary", use_container_width=True
+                "Yes, I can hear my voice", use_container_width=True
             ):
                 logger.info("Microphone check confirmed by user")
                 st.session_state["agentState"] = "customize"
