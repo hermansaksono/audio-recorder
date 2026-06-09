@@ -18,7 +18,7 @@ def display_identity_page(text, editable):
     Returns:
         str: The participant ID entered by the user or an empty string if none provided.
     """
-    st.markdown("#### Participant Identification")
+    st.markdown("<h4>Participant Identification</h4>", unsafe_allow_html=True)
 
     # Get ID from URL parameter if available
     query_params = st.query_params

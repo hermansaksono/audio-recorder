@@ -9,7 +9,7 @@ def show_mic_help_page():
     Display a placeholder help page for microphone troubleshooting.
     """
 
-    st.markdown("#### Microphone Help")
+    st.markdown("<h4>Microphone Help</h4>", unsafe_allow_html=True)
     st.write(
         "this is where I will write instructions on how to deal with a mic that is "
         "not working"

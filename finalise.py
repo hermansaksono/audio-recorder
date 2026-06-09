@@ -48,7 +48,7 @@ def display_audio_preview_page():
     and asks whether they can hear the playback before proceeding to save.
     """
 
-    st.markdown("#### You have recorded your own story")
+    st.markdown("<h4>You have recorded your own story</h4>", unsafe_allow_html=True)
 
     if st.session_state.get("Audio_Story_Preview"):
         st.markdown(
@@ -103,7 +103,7 @@ def display_save_congratulations_page(message_history, table, transcribe):
             st.session_state["_final_processing_complete"] = True
             st.rerun()
 
-    st.markdown("## :tada: Congratulations!")
+    st.markdown("<h2>🎉 Congratulations!</h2>", unsafe_allow_html=True)
     st.markdown(
         "You have finished this experience! Thank you for sharing your story."
     )

@@ -18,7 +18,7 @@ def display_customize_page(text, editable):
         str: The customization request entered by the user or an empty string if
             none provided.
     """
-    st.markdown("#### Personalize your chatbot")
+    st.markdown("<h4>Personalize your chatbot</h4>", unsafe_allow_html=True)
 
     # Use a form to require explicit submission
     with st.form(key="participant_form"):

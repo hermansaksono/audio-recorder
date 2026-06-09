@@ -89,7 +89,7 @@ def generate_scenarios_with_progress(llm_prompts, chat_model, summary_answers):
     Sets up the streamlit page for scenario generation.
     """
 
-    st.markdown("#### Generating example stories")
+    st.markdown("<h4>Generating example stories</h4>", unsafe_allow_html=True)
     messages_container = st.container(border=True)
 
     with messages_container:
@@ -234,7 +234,7 @@ def display_adaptation_page(chat_model, adaptation_prompt_template):
             to adapt the proposed scenario according to suggestions by the user
     """
 
-    st.markdown("#### Adapt your examples")
+    st.markdown("<h4>Adapt your examples</h4>", unsafe_allow_html=True)
     container = st.container(border=True)
     chat_input = st.chat_input()
 
