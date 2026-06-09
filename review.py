@@ -30,7 +30,10 @@ def reviewData(
     # # If a scenario hasn't been selected yet, show all scenarios and
     # # feedback mechanisms
     # if st.session_state["selected_scenario_index"] is None:
-    st.markdown("<h4>Review these examples to help you tell your own story</h4>", unsafe_allow_html=True)
+    st.markdown(
+        "<h4>Review these examples to help you tell your own story</h4>",
+        unsafe_allow_html=True,
+    )
     st.divider()
 
     scenario_columns = st.columns(num_scenarios)
