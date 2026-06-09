@@ -72,7 +72,7 @@ def checkmicrophone():
         height=0,
     )
 
-    st.markdown("#### Microphone Check")
+    st.markdown("<h4>Microphone Check</h4>", unsafe_allow_html=True)
     st.markdown(
         "Before we start, we need to make sure the mic is working "
         "because you will use it later.  \n"
