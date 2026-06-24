@@ -168,6 +168,15 @@ def initialiseAppPage():
         .stApp, .stApp * {
             font-family: Arial, Helvetica, sans-serif !important;
         }
+        /* Keep icon fonts intact (chat avatars, buttons, etc.) so they
+           don't get clobbered by the Arial override above. */
+        .material-icons, .material-icons-outlined,
+        [class*="material-symbols"],
+        span[data-testid="stIconMaterial"],
+        [data-testid*="ChatMessageAvatar"] * {
+            font-family: "Material Symbols Rounded", "Material Symbols Outlined",
+                         "Material Icons" !important;
+        }
         </style>
         """,
         unsafe_allow_html=True,
