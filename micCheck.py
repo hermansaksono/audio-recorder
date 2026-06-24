@@ -6,22 +6,101 @@ logger = st.logger.get_logger("micronarratives")
 
 def show_mic_help_page():
     """
-    Display a placeholder help page for microphone troubleshooting.
+    Display microphone troubleshooting instructions. Lets the user try again
+    after fixing the issue, or, as a last resort, stop participation if the
+    microphone cannot be made to work.
     """
 
     st.markdown("<h4>Microphone Help</h4>", unsafe_allow_html=True)
-    st.write(
-        "this is where I will write instructions on how to deal with a mic that is "
-        "not working"
+    st.markdown(
+        "Sorry, it looks like the microphone isn't working. The microphone is "
+        "needed to take part, so let's try to fix it. Please go through the steps "
+        "below, then try again."
     )
+
+    st.markdown(
+        "**1. Allow microphone access**  \n"
+        "If your browser asked for permission, click *Allow*. If you blocked it "
+        "earlier, click the lock (🔒) or microphone (🎤) icon in the address bar, "
+        "set the microphone to *Allow*, and reload the page."
+    )
+    st.markdown(
+        "**2. Check the correct microphone is selected**  \n"
+        "If you have more than one microphone (for example, a headset and a "
+        "built-in mic), make sure the one you want to use is chosen in your "
+        "browser or computer sound settings."
+    )
+    st.markdown(
+        "**3. Check the microphone itself**  \n"
+        "Make sure it is plugged in, not muted, and that the volume is turned up. "
+        "If you can, try speaking a little louder or moving closer to the mic."
+    )
+    st.markdown(
+        "**4. Reload and try again**  \n"
+        "After changing any settings, reload this page and record again."
+    )
+
+    st.divider()
 
     previous_state = st.session_state.get("previousAgentState", "microphoneCheck")
     if previous_state == "micHelp":
         previous_state = "microphoneCheck"
 
     if st.button("Try Again", use_container_width=True):
+        logger.info("User retrying microphone check from help page")
         st.session_state["agentState"] = previous_state
+        st.session_state.pop("confirmStopParticipation", None)
         st.rerun()
+
+    st.markdown(
+        "<p style='margin-top:1.5rem; color:gray;'>Still not working after trying "
+        "the steps above?</p>",
+        unsafe_allow_html=True,
+    )
+
+    if not st.session_state.get("confirmStopParticipation", False):
+        if st.button(
+            "I can't get my microphone to work",
+            use_container_width=True,
+        ):
+            st.session_state["confirmStopParticipation"] = True
+            st.rerun()
+    else:
+        st.warning(
+            "Because the microphone is required to take part, ending here means "
+            "you will not be able to continue this session. Are you sure?"
+        )
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Go back", use_container_width=True):
+                st.session_state["confirmStopParticipation"] = False
+                st.rerun()
+        with col2:
+            if st.button(
+                "Yes, stop participation",
+                use_container_width=True,
+                type="primary",
+            ):
+                logger.info("User stopped participation from microphone help page")
+                st.session_state.pop("confirmStopParticipation", None)
+                st.session_state["agentState"] = "sessionEnded"
+                st.rerun()
+
+
+def show_session_ended_page():
+    """
+    Final screen shown when a participant stops because the microphone could
+    not be made to work.
+    """
+
+    st.markdown("<h4>Session ended</h4>", unsafe_allow_html=True)
+    st.markdown(
+        "Thank you for your time. Because the microphone is needed to take part "
+        "and we weren't able to get it working, your participation ends here.  \n\n"
+        "If you'd like to try again later, close this tab and reopen the link from "
+        "a device with a working microphone. If you continue to have trouble, "
+        "please contact the research team."
+    )
 
 def checkmicrophone():
     """

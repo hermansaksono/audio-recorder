@@ -125,6 +125,16 @@ def display_completion_page(bucket, transcribe):
             st.header(f"Example {col_index + 1}")
             st.write(generated_scenarios[col_index])
 
+    if not st.session_state.get("show_recording", False):
+        st.markdown(
+            "Now that you've reviewed the examples, you can record your own "
+            "story. Press next to show the recording screen."
+        )
+        if st.button("Next", key="show_recording_button"):
+            st.session_state["show_recording"] = True
+            st.rerun()
+        return
+
     st.markdown("**Here are some aspects of your story.**")
     labels = {
         "aspirations": "Aspirations",

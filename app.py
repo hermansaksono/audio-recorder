@@ -69,6 +69,8 @@ def stateAgent(
             micCheck.checkmicrophone()
         case "micHelp":
             micCheck.show_mic_help_page()
+        case "sessionEnded":
+            micCheck.show_session_ended_page()
         case "customize":
             customize.get_customize_request(llm_prompts)
             logger.info("try to customize")
@@ -157,17 +159,21 @@ def initialiseAppPage():
     """
 
     st.set_page_config(page_title="Storytelling Chatbot", page_icon="💬")
-    st.title("💬 Storytelling Chatbot")
 
-    # Hide GitHub icon
+    # Force Arial font across the whole app
     st.markdown(
         """
         <style>
-        [data-testid="stToolbarActions"] {visibility: hidden;}
+        html, body, [class*="css"], [class*="st-"],
+        .stApp, .stApp * {
+            font-family: Arial, Helvetica, sans-serif !important;
+        }
         </style>
         """,
         unsafe_allow_html=True,
     )
+
+    st.title("💬 Storytelling Chatbot")
 
 
 def initialiseStreamlitSessionState(num_scenarios):
@@ -220,6 +226,10 @@ def initialiseStreamlitSessionState(num_scenarios):
     # The text of the selected scenario (potentially with adaptations)
     if "final_scenario" not in st.session_state:
         st.session_state["final_scenario"] = ""
+
+    # Whether the recording section is shown on the completion screen
+    if "show_recording" not in st.session_state:
+        st.session_state["show_recording"] = False
 
     # Full recorded audio from the final storytelling step
     if "Audio_Story" not in st.session_state:
