@@ -35,10 +35,6 @@ def show_mic_help_page():
         "Make sure it is plugged in, not muted, and that the volume is turned up. "
         "If you can, try speaking a little louder or moving closer to the mic."
     )
-    st.markdown(
-        "**4. Reload and try again**  \n"
-        "After changing any settings, reload this page and record again."
-    )
 
     st.divider()
 
