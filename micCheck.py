@@ -38,9 +38,9 @@ def show_mic_help_page():
 
     st.divider()
 
-    previous_state = st.session_state.get("previousAgentState", "microphoneCheck")
+    previous_state = st.session_state.get("previousAgentState", "micCheck")
     if previous_state == "micHelp":
-        previous_state = "microphoneCheck"
+        previous_state = "micCheck"
 
     if st.button("Try Again", use_container_width=True):
         logger.info("User retrying microphone check from help page")
@@ -174,7 +174,7 @@ def checkmicrophone():
             if st.button("No, I cannot hear my voice", use_container_width=True):
                 logger.info("Microphone check rejected by user")
                 st.session_state["previousAgentState"] = st.session_state.get(
-                    "agentState", "microphoneCheck"
+                    "agentState", "micCheck"
                 )
                 st.session_state["agentState"] = "micHelp"
                 st.rerun()
@@ -184,5 +184,5 @@ def checkmicrophone():
                 "Yes, I can hear my voice", use_container_width=True
             ):
                 logger.info("Microphone check confirmed by user")
-                st.session_state["agentState"] = "customize"
+                st.session_state["agentState"] = "record"
                 st.rerun()

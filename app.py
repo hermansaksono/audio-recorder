@@ -1,166 +1,35 @@
-import os
-import sys
-
-import boto3
 import streamlit as st
-from langchain.chains import ConversationChain
-from langchain.memory import ConversationBufferMemory
-from langchain.output_parsers.json import SimpleJsonOutputParser
-from langchain_community.chat_message_histories import StreamlitChatMessageHistory
-from langchain_openai import ChatOpenAI
-from langsmith import Client
 
-import check
-import conversation
-import customize
-import finalise
-import identify
 import micCheck
-import review
-import scenario
-from llm_config import LLMConfig
+from recorder_services import (
+    build_audio_key,
+    create_bucket_link,
+    create_database_link,
+    fetch_session_data,
+    process_recorded_audio,
+    upload_audio_to_s3,
+)
 
+logger = st.logger.get_logger("micronarratives")
 
-def stateAgent(
-    llm_prompts,
-    chat_model,
-    extraction_chain,
-    smith_client,
-    message_history,
-    memory,
-    table,
-    bucket,
-    transcribe,
-):
-    """
-    Main flow function of the whole interaction -- keeps track of the system state and
-    calls the appropriate procedure on each streamlit refresh.
-    Args:
-        llm_prompts (LLMConfig): class containing text and templates for the app
-        chat_model (ChatOpenAI): OpenAI chat model
-        smith_client (langsmith.Client): LangSmith client
-        message_history (StreamlitChatMessageHistory): chat history, stored in Streamlit
-            session state
-        memory (ConversationBufferMemory): chat history
-        table (DynamoDB.Table | None): a DynamoDB table where the data will be stored
-    """
+MAX_RECORDING_SECONDS = 10 * 60  # 10 minutes
 
-    # Use dummy data
-    testing = False
-
-    if testing:
-        logger.info(
-            f"Running stateAgent loop\tsession state: {st.session_state['agentState']}"
-        )
-
-    conversation_chain = ConversationChain(
-        prompt=llm_prompts.questions_prompt_template,
-        llm=chat_model,
-        verbose=True,
-        memory=memory,
-    )
-
-    # Select the appropriate agent depending on session state
-    # (start/check/summarise/review/finalise)
-    match st.session_state["agentState"]:
-        case "identify":
-            identify.get_participant_id(llm_prompts)
-        case "microphoneCheck":
-            micCheck.checkmicrophone()
-        case "micHelp":
-            micCheck.show_mic_help_page()
-        case "sessionEnded":
-            micCheck.show_session_ended_page()
-        case "customize":
-            customize.get_customize_request(llm_prompts)
-            logger.info("try to customize")
-        case "start":
-            conversation.getData(
-                llm_prompts,
-                conversation_chain,
-                message_history,
-            )
-        case "check":
-            check.checkMessages(message_history)
-        case "summarise":
-            scenario.summariseData(
-                llm_prompts,
-                chat_model,
-                message_history,
-                extraction_chain,
-                testing,
-            )
-        case "review":
-            review.reviewData(
-                smith_client,
-                chat_model,
-                llm_prompts.adaptation_prompt_template,
-                llm_prompts.one_shot,
-                testing,
-            )
-        case "finalise":
-            scenario.finaliseScenario(
-                chat_model, llm_prompts.adaptation_prompt_template
-            )
-        case "save":
-            finalise.saveScenario(
-                message_history, table
-                )
-        case "final":
-            finalise.display_completion_page(bucket, transcribe)
-        case "audioPreview":
-            finalise.display_audio_preview_page()
-        case "audioConfirmed":
-            finalise.display_save_congratulations_page(
-                message_history,
-                table,
-                transcribe,
-            )
-
-
-def markConsent():
-    """
-    Updates the session's consent marker; used when button is pressed on consent page.
-    """
-
-    logger.info("Consent given")
-    st.session_state["consent"] = True
-
-
-def requestConsent(consent_text):
-    """
-    Generates a page with the provided consent text and a button to accept.
-    """
-
-    logger.info("Consent not provided")
-    consent_message = st.container()
-    with consent_message:
-        st.markdown(consent_text)
-        st.button("I accept", key="consent_button", on_click=markConsent)
-
-
-@st.cache_resource
-def createLLMPromptsFromFile(config_file):
-    """
-    Generate set of prompts and other strings required by the app from config file.
-    Args:
-        config_file (str): path to configuration file
-    """
-
-    logger.info(f"Configuring app using {config_file}\n")
-    llm_prompts = LLMConfig(config_file)
-
-    return llm_prompts
+# Labels for the storytelling points shown while the participant records.
+SUMMARY_LABELS = {
+    "aspirations": "Aspirations",
+    "activity": "Activity",
+    "location": "Location",
+    "time": "Time",
+    "companions": "Companions",
+    "feelings": "Feelings",
+    "takeaways": "Takeaways",
+}
 
 
 def initialiseAppPage():
-    """
-    Initialise the Streamlit app's page.
-    """
+    """Initialise the Streamlit page (title, icon, Arial font)."""
+    st.set_page_config(page_title="Record Your Story", page_icon="🎙️")
 
-    st.set_page_config(page_title="Storytelling Chatbot", page_icon="💬")
-
-    # Force Arial font across the whole app
     st.markdown(
         """
         <style>
@@ -168,8 +37,6 @@ def initialiseAppPage():
         .stApp, .stApp * {
             font-family: Arial, Helvetica, sans-serif !important;
         }
-        /* Keep icon fonts intact (chat avatars, buttons, etc.) so they
-           don't get clobbered by the Arial override above. */
         .material-icons, .material-icons-outlined,
         [class*="material-symbols"],
         span[data-testid="stIconMaterial"],
@@ -182,260 +49,181 @@ def initialiseAppPage():
         unsafe_allow_html=True,
     )
 
-    st.title("💬 Storytelling Chatbot")
+    st.title("🎙️ Record Your Story")
 
 
-def initialiseStreamlitSessionState(num_scenarios):
+def initialiseSessionState():
     """
-    Initialise variables that persist throughout refreshes of a Streamlit session.
+    Read the identifiers passed from the conversation app via the URL and set up the
+    recorder's session state. ``session_id`` is required -- without it we cannot locate
+    the participant's data or upload the audio to the right place.
     """
-
-    # The participant ID for tracking across sessions
-    if "participant_id" not in st.session_state:
-        st.session_state["participant_id"] = None
-
-    # Whether the user has provided consent
-    if "consent" not in st.session_state:
-        st.session_state["consent"] = False
-
-    # The current state of the app
-    if "agentState" not in st.session_state:
-        st.session_state["agentState"] = "identify"
-
-    # Prolific study identifiers, passed as URL query parameters. When present these
-    # take priority over the internal Streamlit session id and let us skip asking the
-    # participant to type their ID.
     query_params = st.query_params
 
-    # A unique identifier for this conversation. Prefer the Prolific SESSION_ID; fall
-    # back to Streamlit's internal runtime session id for local/manual runs.
     if "session_id" not in st.session_state:
-        st.session_state["session_id"] = (
-            query_params.get("SESSION_ID")
-            or st.runtime.scriptrunner.get_script_run_ctx().session_id
-        )
-
-    # The Prolific study ID, if provided
+        st.session_state["session_id"] = query_params.get("session_id")
+    if "participant_id" not in st.session_state:
+        st.session_state["participant_id"] = query_params.get("participant_id")
     if "study_id" not in st.session_state:
-        st.session_state["study_id"] = query_params.get("STUDY_ID")
-
-    # The Prolific participant ID, if provided
+        st.session_state["study_id"] = query_params.get("study_id")
     if "prolific_pid" not in st.session_state:
-        st.session_state["prolific_pid"] = query_params.get("PROLIFIC_PID")
+        st.session_state["prolific_pid"] = query_params.get("prolific_pid")
 
-    # Also track LangSmith ID (may not be used depending on data storage choice)
-    if "langsmith_run_id" not in st.session_state:
-        st.session_state["langsmith_run_id"] = None
+    if "agentState" not in st.session_state:
+        st.session_state["agentState"] = "micCheck"
 
-    # A dict containing key points from the conversation
+    # The participant's storytelling points, fetched from DynamoDB once.
     if "summary_answers" not in st.session_state:
-        st.session_state["summary_answers"] = {}
+        st.session_state["summary_answers"] = None
 
-    # The scenarios generated by the LLM, based on the summary answers
-    if "generated_scenarios" not in st.session_state:
-        st.session_state["generated_scenarios"] = [""] * num_scenarios
-
-    # Numerical feedback from the user on each of the scenarios
-    if "scenario_feedback" not in st.session_state:
-        st.session_state["scenario_feedback"] = [None] * num_scenarios
-
-    # Textual judgement on initial scenario content (may not be completed for all)
-    if "scenario_judgement" not in st.session_state:
-        st.session_state["scenario_judgement"] = [""] * num_scenarios
-
-    # The index of the selected scenario
-    if "selected_scenario_index" not in st.session_state:
-        st.session_state["selected_scenario_index"] = None
-
-    # The text of the selected scenario (potentially with adaptations)
-    if "final_scenario" not in st.session_state:
-        st.session_state["final_scenario"] = ""
-
-    # Whether the recording section is shown on the completion screen
-    if "show_recording" not in st.session_state:
-        st.session_state["show_recording"] = False
-
-    # Full recorded audio from the final storytelling step
     if "Audio_Story" not in st.session_state:
         st.session_state["Audio_Story"] = None
-
-    # First 10 seconds of the recorded audio for playback preview
     if "Audio_Story_Preview" not in st.session_state:
         st.session_state["Audio_Story_Preview"] = None
 
-    # Transcript generated from the final audio recording
-    if "Text_Story" not in st.session_state:
-        st.session_state["Text_Story"] = ""
 
-    # Whether the final transcription + save step has completed
-    if "_final_processing_complete" not in st.session_state:
-        st.session_state["_final_processing_complete"] = False
+def loadSummaryAnswers(table):
+    """Fetch and cache this session's storytelling points from DynamoDB."""
+    if st.session_state["summary_answers"] is not None:
+        return
 
-@st.cache_resource
-def loadSettings():
-    """
-    Obtain settings from streamlit secrets file and/or command line arguments.
-    """
-
-    # LangChain uses API keys and settings from env
-    os.environ["LANGCHAIN_API_KEY"] = st.secrets["LANGCHAIN_API_KEY"]
-    os.environ["LANGCHAIN_PROJECT"] = st.secrets["LANGCHAIN_PROJECT"]
-    os.environ["LANGCHAIN_TRACING_V2"] = "true"
-    if st.secrets["LANGCHAIN_ENDPOINT"]:
-        os.environ["LANGCHAIN_ENDPOINT"] = st.secrets["LANGCHAIN_ENDPOINT"]
-
-    # Get an OpenAI API Key before continuing
-    if "OPENAI_API_KEY" in st.secrets:
-        os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
-    else:
-        os.environ["OPENAI_API_KEY"] = st.sidebar.text_input(
-            "OpenAI API Key", type="password"
-        )
-    if not os.environ["OPENAI_API_KEY"]:
-        st.info("Enter an OpenAI API Key to continue")
-        st.stop()
-
-    # Identify config file from input args or streamlit secrets
-    input_args = sys.argv[1:]
-    if len(input_args):
-        config_file = input_args[0]
-    else:
-        config_file = st.secrets.get(
-            "CONFIG_FILE", os.path.join("configs", "example_social.toml")
-        )
-
-    return config_file
+    item = fetch_session_data(table, st.session_state["session_id"])
+    st.session_state["summary_answers"] = (item or {}).get("summary_answers", {})
 
 
-def buildExtractionChain(extraction_prompt_template, model_name):
-    """
-    Create a chain to generate json-formatted output based on the conversation history.
-    Args:
-        extraction_prompt (str): text for the extraction prompt
-        model_name (str): name of the OpenAI LLM
-    Returns:
-        RunnableSequence: chain to extract json-formatted output from conversation
-    """
+def render_summary_points():
+    """Show the storytelling points so the participant can refer to them while telling
+    their story."""
+    summary_answers = st.session_state.get("summary_answers") or {}
+    if not summary_answers:
+        return
 
-    extraction_llm = ChatOpenAI(
-        temperature=0.1, model=model_name, openai_api_key=os.environ["OPENAI_API_KEY"]
+    st.markdown("**Here are some aspects of your story.**")
+    for field, content in summary_answers.items():
+        label = SUMMARY_LABELS.get(field, field.capitalize())
+        st.markdown(f"- **{label}**: {content}")
+
+
+def display_record_page():
+    """Show the storytelling points and the recording widget."""
+    render_summary_points()
+
+    st.markdown(
+        "**Now that you have the storytelling points, you can bring your story to "
+        "life. Please tell it out loud in your own words, just like you would if "
+        "you were sharing it with a friend or family member who's never heard it "
+        "before.**"
     )
 
-    extraction_chain = (
-        extraction_prompt_template | extraction_llm | SimpleJsonOutputParser()
+    st.divider()
+
+    st.markdown(
+        "Click on the microphone icon below to record your story. "
+        "When you are done, click on the button again.  \n"
+        "Your web browser may ask for permission to use the mic. "
+        'Please click "Allow".  \n'
+        "*Note: recording will automatically stop after 10 minutes.*"
     )
 
-    return extraction_chain
+    audio_input = st.audio_input("", label_visibility="collapsed")
+    audio_bytes = audio_input.getvalue() if audio_input else None
+
+    if audio_bytes:
+        process_recorded_audio(audio_bytes, MAX_RECORDING_SECONDS)
 
 
-@st.cache_resource
-def createDatabaseLink():
-    """
-    Set up a boto3 session to handle connection to the DynamoDB database (if required).
-    The table name should be specified via Streamlit secrets; if none is provided, the
-    process of saving to a database will be skipped. Relies on credentials being
-    available in the current environment.
-    Returns:
-        table (DynamoDB.Table | None): the DynamoDB table where the data will be stored,
-            or None if storage in a database is not required
-    """
+def display_preview_page(bucket):
+    """Play back a 10-second preview and, once confirmed, upload the audio to S3."""
+    st.markdown("<h4>You have recorded your own story</h4>", unsafe_allow_html=True)
 
-    if table_name := st.secrets.get("DYNAMODB_TABLE_NAME"):
-        session = boto3.Session()
-        dynamodb_resource = session.resource("dynamodb")
-        table = dynamodb_resource.Table(table_name)
-        logger.info(f"Data will be saved to {table_name}\n")
-    else:
-        table = None
-        logger.info("No database details provided\n")
-
-    return table
-
-@st.cache_resource
-def createBucketLink():
-    """
-    Set up a boto3 session to handle connection to the s3 bucket (if required).
-    The bucket name should be specified via Streamlit secrets; if none is provided, the
-    process of saving audio to a bucket will be skipped. Relies on credentials being
-    available in the current environment.
-    Returns:
-        bucket (s3.Bucket | None): the s3 bucket where the final audio will be stored,
-            or None if storage in a database is not required
-    """
-
-    if bucket_name := st.secrets.get("S3_BUCKET_NAME"):
-        bucket = boto3.client(
-            service_name = 's3',
-            region_name = st.secrets.get("AWS_DEFAULT_REGION"),
-            aws_access_key_id = st.secrets.get("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key = st.secrets.get("AWS_SECRET_ACCESS_KEY")
+    if st.session_state.get("Audio_Story_Preview"):
+        st.markdown(
+            "Play your story below to make sure it sounds fine. "
+            "This preview is just the first 10 seconds of your recording. "
+            "The full recording will be saved, don't worry."
         )
-        logger.info(f"audio will be saved to {bucket_name}\n")
+        st.audio(st.session_state["Audio_Story_Preview"], format="audio/wav")
     else:
-        bucket = None
-        logger.info("No bucket details provided\n")
+        st.write("No audio preview is available yet.")
 
-    return bucket
+    st.divider()
+    st.write("Can you hear your recording?")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("No, I cannot hear my recording", use_container_width=True):
+            logger.info("Audio preview rejected by user")
+            st.session_state["previousAgentState"] = "record"
+            st.session_state["agentState"] = "micHelp"
+            st.rerun()
+
+    with col2:
+        if st.button("Yes, I can hear my recording", use_container_width=True):
+            logger.info("Audio preview confirmed by user")
+            key = build_audio_key(st.session_state["session_id"])
+            with st.spinner("Saving your story..."):
+                uploaded = upload_audio_to_s3(
+                    st.session_state["Audio_Story"], bucket, key
+                )
+            if uploaded:
+                st.session_state["agentState"] = "done"
+            else:
+                st.session_state["agentState"] = "uploadFailed"
+            st.rerun()
 
 
-@st.cache_resource
-def createTranscribeLink():
-    """
-    Create and cache a boto3 Transcribe client.
-    Uses Streamlit secrets for region + credentials, same as your S3 setup.
-    Returns:
-        transcribe (boto3 client): Amazon Transcribe client
-    """
-    region = st.secrets.get("AWS_DEFAULT_REGION", "us-east-1")
+def display_done_page():
+    """Terminal congratulations screen."""
+    st.markdown("<h2>🎉 Congratulations!</h2>", unsafe_allow_html=True)
+    st.markdown("You have finished this experience! Thank you for sharing your story.")
 
-    transcribe = boto3.client(
-        service_name="transcribe",
-        region_name=region,
-        aws_access_key_id=st.secrets.get("AWS_ACCESS_KEY_ID"),
-        aws_secret_access_key=st.secrets.get("AWS_SECRET_ACCESS_KEY"),
+
+def display_upload_failed_page():
+    """Shown if the S3 upload failed; lets the participant retry."""
+    st.error(
+        "Something went wrong while saving your recording. Please try again. "
+        "If the problem continues, contact the research team."
+    )
+    if st.button("Try saving again", use_container_width=True):
+        st.session_state["agentState"] = "preview"
+        st.rerun()
+
+
+def display_missing_session_page():
+    """Shown when the app is opened without a session_id in the URL."""
+    st.error(
+        "This page needs to be opened from the storytelling conversation. "
+        "The link appears to be missing its session information, so we can't record "
+        "your story here. Please return to the previous step and use the "
+        '"Continue to the recording step" button.'
     )
 
-    logger.info(f"Transcribe client initialized in region {region}")
-    return transcribe
 
 if __name__ == "__main__":
-    logger = st.logger.get_logger("micronarratives")
-
     initialiseAppPage()
+    initialiseSessionState()
 
-    config_file = loadSettings()
-    llm_prompts = createLLMPromptsFromFile(config_file)
-    table = createDatabaseLink()
-    bucket = createBucketLink()
-    transcribe = createTranscribeLink()
+    bucket = create_bucket_link()
+    table = create_database_link()
 
-    # Initialise Streamlit session and LangSmith
-    initialiseStreamlitSessionState(len(llm_prompts.personas))
-    chat_model = ChatOpenAI(
-        temperature=0.3,
-        model=llm_prompts.model_name,
-        openai_api_key=os.environ["OPENAI_API_KEY"],
-    )
-
-    smith_client = Client()
-    message_history = StreamlitChatMessageHistory(key="langchain_messages")
-    memory = ConversationBufferMemory(memory_key="history", chat_memory=message_history)
-
-    extraction_chain = buildExtractionChain(
-        llm_prompts.extraction_prompt_template, llm_prompts.model_name
-    )
-
-    if st.session_state["consent"]:
-        stateAgent(
-            llm_prompts,
-            chat_model,
-            extraction_chain,
-            smith_client,
-            message_history,
-            memory,
-            table,
-            bucket,
-            transcribe,
-        )
+    if not st.session_state.get("session_id"):
+        display_missing_session_page()
     else:
-        requestConsent(llm_prompts.intro_and_consent)
+        loadSummaryAnswers(table)
+
+        match st.session_state["agentState"]:
+            case "micCheck":
+                micCheck.checkmicrophone()
+            case "micHelp":
+                micCheck.show_mic_help_page()
+            case "sessionEnded":
+                micCheck.show_session_ended_page()
+            case "record":
+                display_record_page()
+            case "preview":
+                display_preview_page(bucket)
+            case "uploadFailed":
+                display_upload_failed_page()
+            case "done":
+                display_done_page()

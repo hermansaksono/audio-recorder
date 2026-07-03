@@ -5,15 +5,8 @@ name = "pypi"
 
 [packages]
 streamlit = "*"
-streamlit-feedback = "*"
-langchain = "*"
-langchain-community = "*"
-langchain-openai = "*"
-langsmith = "*"
 boto3 = "*"
-aws = "*"
 pydub = "*"
-audio-recorder-streamlit = "*"
 
 [dev-packages]
 ruff = "*"
