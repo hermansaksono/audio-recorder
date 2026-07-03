@@ -54,20 +54,32 @@ def initialiseAppPage():
 
 def initialiseSessionState():
     """
-    Read the identifiers passed from the conversation app via the URL and set up the
-    recorder's session state. ``session_id`` is required -- without it we cannot locate
-    the participant's data or upload the audio to the right place.
+    Read the identifiers from the URL and set up the recorder's session state. This app
+    and the conversation app are opened as two separate links that carry the SAME
+    identifiers, so they must be read the same way here as in the conversation app:
+    Prolific's ``SESSION_ID`` / ``PROLIFIC_PID`` / ``STUDY_ID`` (lowercase accepted as a
+    fallback for manually constructed links). ``session_id`` is required -- it is the
+    DynamoDB primary key and drives the S3 upload location, so without it we cannot
+    locate the participant's data or upload the audio to the right place.
     """
     query_params = st.query_params
 
     if "session_id" not in st.session_state:
-        st.session_state["session_id"] = query_params.get("session_id")
+        st.session_state["session_id"] = query_params.get("SESSION_ID") or (
+            query_params.get("session_id")
+        )
     if "participant_id" not in st.session_state:
-        st.session_state["participant_id"] = query_params.get("participant_id")
+        st.session_state["participant_id"] = query_params.get("PROLIFIC_PID") or (
+            query_params.get("participant_id")
+        )
     if "study_id" not in st.session_state:
-        st.session_state["study_id"] = query_params.get("study_id")
+        st.session_state["study_id"] = query_params.get("STUDY_ID") or (
+            query_params.get("study_id")
+        )
     if "prolific_pid" not in st.session_state:
-        st.session_state["prolific_pid"] = query_params.get("prolific_pid")
+        st.session_state["prolific_pid"] = query_params.get("PROLIFIC_PID") or (
+            query_params.get("prolific_pid")
+        )
 
     if "agentState" not in st.session_state:
         st.session_state["agentState"] = "micCheck"
@@ -191,12 +203,12 @@ def display_upload_failed_page():
 
 
 def display_missing_session_page():
-    """Shown when the app is opened without a session_id in the URL."""
+    """Shown when the app is opened without a session id in the URL."""
     st.error(
-        "This page needs to be opened from the storytelling conversation. "
-        "The link appears to be missing its session information, so we can't record "
-        "your story here. Please return to the previous step and use the "
-        '"Continue to the recording step" button.'
+        "This recording link is missing its session information, so we can't record "
+        "your story here. Please make sure you opened the exact link you were given "
+        "(it should include your session details). If the problem continues, contact "
+        "the research team."
     )
 
 
