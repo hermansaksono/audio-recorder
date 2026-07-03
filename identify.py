@@ -20,9 +20,11 @@ def display_identity_page(text, editable):
     """
     st.markdown("<h4>Participant Identification</h4>", unsafe_allow_html=True)
 
-    # Get ID from URL parameter if available
+    # Get ID from URL parameter if available. Prefer the Prolific participant ID.
     query_params = st.query_params
-    default_id = query_params.get("participant_id", "")
+    default_id = query_params.get("PROLIFIC_PID") or query_params.get(
+        "participant_id", ""
+    )
 
     # Use a form to require explicit submission
     with st.form(key="participant_form"):
@@ -60,6 +62,15 @@ def get_participant_id(llm_prompts):
         llm_prompts (LLMConfig): Configuration object containing prompts, settings,
             and a flag indicating whether a participant ID is required.
     """
+
+    # If a Prolific participant ID was supplied via the URL, there is no need to ask
+    # the participant to type an ID -- skip the identification page entirely.
+    prolific_pid = st.session_state.get("prolific_pid")
+    if prolific_pid:
+        logger.info(f"Participant ID from Prolific: {prolific_pid}")
+        st.session_state["participant_id"] = prolific_pid
+        st.session_state["agentState"] = "microphoneCheck"
+        st.rerun()
 
     if llm_prompts.require_participant_id:
         participant_id = display_identity_page(

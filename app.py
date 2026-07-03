@@ -202,11 +202,26 @@ def initialiseStreamlitSessionState(num_scenarios):
     if "agentState" not in st.session_state:
         st.session_state["agentState"] = "identify"
 
-    # A unique identifier for this conversation
+    # Prolific study identifiers, passed as URL query parameters. When present these
+    # take priority over the internal Streamlit session id and let us skip asking the
+    # participant to type their ID.
+    query_params = st.query_params
+
+    # A unique identifier for this conversation. Prefer the Prolific SESSION_ID; fall
+    # back to Streamlit's internal runtime session id for local/manual runs.
     if "session_id" not in st.session_state:
         st.session_state["session_id"] = (
-            st.runtime.scriptrunner.get_script_run_ctx().session_id
+            query_params.get("SESSION_ID")
+            or st.runtime.scriptrunner.get_script_run_ctx().session_id
         )
+
+    # The Prolific study ID, if provided
+    if "study_id" not in st.session_state:
+        st.session_state["study_id"] = query_params.get("STUDY_ID")
+
+    # The Prolific participant ID, if provided
+    if "prolific_pid" not in st.session_state:
+        st.session_state["prolific_pid"] = query_params.get("PROLIFIC_PID")
 
     # Also track LangSmith ID (may not be used depending on data storage choice)
     if "langsmith_run_id" not in st.session_state:

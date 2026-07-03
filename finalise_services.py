@@ -12,6 +12,17 @@ from pydub import AudioSegment
 logger = st.logger.get_logger("micronarratives")
 
 
+def build_audio_key(participant_id):
+    """
+    Build the S3 key for a recording, e.g.
+    ``{participant_id}-{UTC date}-{UTC time}/{participant_id}-{UTC date}-{UTC time}.wav``.
+    The UTC timestamp makes objects sort chronologically in the bucket.
+    """
+    ts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d-%H%M%S")
+    stem = f"{participant_id}-{ts}"
+    return f"{stem}/{stem}.wav"
+
+
 def create_audio_preview(wav_bytes, max_seconds=10):
     try:
         audio = AudioSegment.from_file(io.BytesIO(wav_bytes), format="wav")
@@ -51,6 +62,9 @@ def summarise_session_data(message_history):
     scenario_package = {
         "session_id": str(st.session_state["session_id"]),
         "participant_id": str(st.session_state["participant_id"]),
+        "prolific_pid": str(st.session_state.get("prolific_pid")),
+        "study_id": str(st.session_state.get("study_id")),
+        "audio_s3_key": str(st.session_state.get("audio_s3_key")),
         "langsmith_session_id": str(st.session_state["langsmith_run_id"]),
         "completion_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "all_scenario": st.session_state["generated_scenarios"],
@@ -98,9 +112,9 @@ def transcribe_saved_audio(transcribe):
         logger.info("S3 upload finished; proceeding with transcription")
 
     bucket_name = st.secrets.get("S3_BUCKET_NAME")
-    key = f"{st.session_state['session_id']}/audio.wav"
+    key = st.session_state.get("audio_s3_key")
 
-    if not transcribe or not bucket_name:
+    if not transcribe or not bucket_name or not key:
         logger.info("Transcription skipped because Transcribe or S3 is not configured")
         st.session_state["Text_Story"] = ""
         return ""
@@ -181,7 +195,8 @@ def process_recorded_audio(audio_bytes, bucket, max_recording_seconds):
     # Upload to S3 in the background so the user reaches the preview page immediately.
     # The thread is stored in session state so transcription can wait for it to finish.
     bucket_name = st.secrets.get("S3_BUCKET_NAME")
-    key = f"{st.session_state['session_id']}/audio.wav"
+    key = build_audio_key(st.session_state["participant_id"])
+    st.session_state["audio_s3_key"] = key
     if bucket and bucket_name:
         upload_thread = threading.Thread(
             target=_upload_audio_to_s3,

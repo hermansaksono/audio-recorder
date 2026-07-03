@@ -159,6 +159,8 @@ def display_completion_page(bucket, transcribe):
 
     MAX_RECORDING_SECONDS = 10 * 60  # 10 minutes
 
+    st.divider()
+
     st.markdown(
         "Click on the microphone icon below to record your story. "
         "When you are done, click on the button again.  \n"
