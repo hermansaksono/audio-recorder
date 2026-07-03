@@ -6,8 +6,11 @@ file to ``recordings/{session_id}/audio.wav``. It recovers the session id from t
 key and starts an asynchronous Amazon Transcribe job, then returns immediately -- it
 does NOT poll for completion (that is Lambda B's job).
 
+The job is started WITHOUT an output bucket, so Amazon Transcribe stores the raw
+result in its own service-managed bucket and returns a ``TranscriptFileUri`` that
+Lambda B fetches. Nothing transcript-related is written to our own S3 bucket.
+
 Environment variables:
-    OUTPUT_BUCKET    S3 bucket where the transcript JSON is written.
     LANGUAGE_CODE    Transcribe language code (default "en-US").
     JOB_NAME_PREFIX  Prefix for Transcribe job names (default "story-").
 """
@@ -19,7 +22,6 @@ import boto3
 
 transcribe = boto3.client("transcribe")
 
-OUTPUT_BUCKET = os.environ["OUTPUT_BUCKET"]
 LANGUAGE_CODE = os.environ.get("LANGUAGE_CODE", "en-US")
 JOB_NAME_PREFIX = os.environ.get("JOB_NAME_PREFIX", "story-")
 
@@ -46,14 +48,12 @@ def job_name_for(session_id):
     return f"{JOB_NAME_PREFIX}{safe}"[:200]
 
 
-def start_job(job_name, media_uri, output_key):
+def start_job(job_name, media_uri):
     kwargs = dict(
         TranscriptionJobName=job_name,
         LanguageCode=LANGUAGE_CODE,
         MediaFormat="wav",
         Media={"MediaFileUri": media_uri},
-        OutputBucketName=OUTPUT_BUCKET,
-        OutputKey=output_key,
     )
     try:
         transcribe.start_transcription_job(**kwargs)
@@ -81,8 +81,4 @@ def handler(event, context):
             continue
 
         media_uri = f"s3://{bucket}/{key}"
-        start_job(
-            job_name=job_name_for(session_id),
-            media_uri=media_uri,
-            output_key=f"transcripts/{session_id}.json",
-        )
+        start_job(job_name=job_name_for(session_id), media_uri=media_uri)

@@ -2,25 +2,27 @@
 Lambda B -- "store-transcript".
 
 Triggered by an EventBridge rule on "Transcribe Job State Change" (COMPLETED or
-FAILED). It recovers the session id from the job's media URI, reads the transcript
-JSON, and writes ``text_story`` back onto the DynamoDB item with ``update_item`` so
-the conversation app's data is left untouched.
+FAILED). It recovers the session id from the job's media URI, fetches the transcript
+JSON from the ``TranscriptFileUri`` Amazon Transcribe returns, and writes
+``text_story`` back onto the DynamoDB item with ``update_item`` so the conversation
+app's data is left untouched.
+
+The transcript lives only in DynamoDB -- Transcribe holds the raw JSON in its own
+service-managed bucket (no output bucket is configured), and it is fetched over HTTPS
+rather than from our S3 bucket.
 
 Environment variables:
-    TABLE_NAME     DynamoDB table (e.g. "micro-narrative-story-app-database").
-    OUTPUT_BUCKET  S3 bucket that holds transcripts/{session_id}.json.
+    TABLE_NAME  DynamoDB table (e.g. "micro-narrative-story-app-database").
 """
 
 import json
 import os
+import urllib.request
 
 import boto3
 
 transcribe = boto3.client("transcribe")
-s3 = boto3.client("s3")
 table = boto3.resource("dynamodb").Table(os.environ["TABLE_NAME"])
-
-OUTPUT_BUCKET = os.environ["OUTPUT_BUCKET"]
 
 
 def session_id_from_media_uri(uri):
@@ -33,6 +35,13 @@ def session_id_from_media_uri(uri):
     if len(parts) >= 4 and parts[1] == "recordings":
         return parts[2]
     return None
+
+
+def fetch_transcript_text(transcript_file_uri):
+    """Download the Transcribe result JSON and return the transcript text."""
+    with urllib.request.urlopen(transcript_file_uri) as response:
+        payload = json.loads(response.read())
+    return payload["results"]["transcripts"][0]["transcript"]
 
 
 def update_item(session_id, *, text_story=None, status, failure_reason=None):
@@ -91,10 +100,5 @@ def handler(event, context):
         print(f"Ignoring job {job_name} in status {status}")
         return
 
-    # Read the transcript we asked Transcribe to write to our output bucket.
-    output_key = f"transcripts/{session_id}.json"
-    obj = s3.get_object(Bucket=OUTPUT_BUCKET, Key=output_key)
-    payload = json.loads(obj["Body"].read())
-    text = payload["results"]["transcripts"][0]["transcript"]
-
+    text = fetch_transcript_text(job["Transcript"]["TranscriptFileUri"])
     update_item(session_id, text_story=text, status="COMPLETED")

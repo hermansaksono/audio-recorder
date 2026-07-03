@@ -2,19 +2,10 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "ReadAudioAndTranscripts",
+      "Sid": "ReadAudio",
       "Effect": "Allow",
       "Action": ["s3:GetObject"],
-      "Resource": [
-        "arn:aws:s3:::storycraft-audio-bucket/recordings/*",
-        "arn:aws:s3:::storycraft-audio-bucket/transcripts/*"
-      ]
-    },
-    {
-      "Sid": "WriteTranscripts",
-      "Effect": "Allow",
-      "Action": ["s3:PutObject"],
-      "Resource": "arn:aws:s3:::storycraft-audio-bucket/transcripts/*"
+      "Resource": "arn:aws:s3:::storycraft-audio-bucket/recordings/*"
     },
     {
       "Sid": "RunTranscribeJobs",

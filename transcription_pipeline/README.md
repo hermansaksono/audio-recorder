@@ -16,18 +16,22 @@ recorder app  ──►  s3://storycraft-audio-bucket/recordings/{session_id}/au
                         │  (S3 ObjectCreated event, prefix "recordings/", suffix ".wav")
                         ▼
                    Lambda A  (lambda_start_transcription.py)
-                        │      starts an async Transcribe job, output ->
-                        │      s3://.../transcripts/{session_id}.json  — then exits
+                        │      starts an async Transcribe job (no output bucket, so the
+                        │      raw result stays in Transcribe's managed bucket) — then exits
                         ▼
                    Amazon Transcribe
                         │  (EventBridge: "Transcribe Job State Change" = COMPLETED/FAILED)
                         ▼
                    Lambda B  (lambda_store_transcript.py)
-                        │      reads the transcript, recovers session_id from the
-                        │      job's media URI, and update_item's DynamoDB
+                        │      fetches the transcript over HTTPS (TranscriptFileUri),
+                        │      recovers session_id from the job's media URI, update_item's
+                        │      DynamoDB
                         ▼
         DynamoDB item (Key: session_id) gains text_story + transcription_status
 ```
+
+The transcript is stored **only in DynamoDB**. Nothing transcript-related is written
+to `storycraft-audio-bucket` — the pipeline only ever reads the audio from it.
 
 ## The shared contract (must match the two Streamlit apps)
 
@@ -50,14 +54,11 @@ recorder app  ──►  s3://storycraft-audio-bucket/recordings/{session_id}/au
 
 ## Environment variables
 
-Both Lambdas:
-- `OUTPUT_BUCKET` = `storycraft-audio-bucket` (transcripts written under `transcripts/`)
-
-Lambda A also:
+Lambda A:
 - `LANGUAGE_CODE` (optional, default `en-US`)
 - `JOB_NAME_PREFIX` (optional, default `story-`)
 
-Lambda B also:
+Lambda B:
 - `TABLE_NAME` = `micro-narrative-story-app-database`
 
 ## Deploy (console outline)
@@ -67,8 +68,7 @@ Lambda B also:
    `AWSLambdaBasicExecutionRole` for CloudWatch logs.
 2. **Lambda A** — Python 3.12, handler `lambda_start_transcription.handler`, the role
    above, env vars set. Add an **S3 trigger** on `storycraft-audio-bucket` with prefix
-   `recordings/` and suffix `.wav`.  ⚠️ Scope the prefix to `recordings/` so the
-   transcripts Lambda A writes under `transcripts/` do NOT re-trigger it.
+   `recordings/` and suffix `.wav`.
 3. **Lambda B** — Python 3.12, handler `lambda_store_transcript.handler`, same role,
    env vars set.
 4. **EventBridge rule** — event pattern:
@@ -90,9 +90,11 @@ Lambda B also:
 - On a FAILED job, Lambda B writes `transcription_status = "FAILED"` plus
   `transcription_failure_reason` instead of a transcript.
 
-## Note on the output bucket
+## Where the transcript lives
 
-This uses one bucket (`storycraft-audio-bucket`) with two prefixes — `recordings/`
-(input) and `transcripts/` (output). Keeping the S3 trigger scoped to `recordings/`
-prevents an infinite loop. If you prefer, point `OUTPUT_BUCKET` at a separate bucket
-instead.
+The transcript ends up **only in DynamoDB** (`text_story` on the `session_id` item).
+No output bucket is configured, so Amazon Transcribe keeps the raw result JSON in its
+own service-managed bucket and Lambda B fetches it over HTTPS via the job's
+`TranscriptFileUri`. Your `storycraft-audio-bucket` is only ever read from (the input
+audio), never written to by this pipeline — so there is no risk of the output
+re-triggering Lambda A.
