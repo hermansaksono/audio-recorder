@@ -26,14 +26,27 @@ LANGUAGE_CODE = os.environ.get("LANGUAGE_CODE", "en-US")
 JOB_NAME_PREFIX = os.environ.get("JOB_NAME_PREFIX", "story-")
 
 
+def session_id_from_stem(stem):
+    """
+    Recover the session id from a folder/file stem of the form
+    ``{participant_id}-{YYYYMMDD}-{HHMMSS}-{session_id}``. The participant id, date and
+    time never contain "-", so everything after the third "-" is the session id (which
+    may itself contain "-"). Returns None if the stem has too few fields.
+    """
+    fields = stem.split("-", 3)
+    if len(fields) == 4:
+        return fields[3]
+    return None
+
+
 def session_id_from_key(key):
     """
-    Recover the session id from an audio key of the form
-    ``recordings/{session_id}/audio.wav``. Returns None for any other layout.
+    Recover the session id from an audio key of the form ``{stem}/{stem}.wav``.
+    Returns None for any other layout.
     """
     parts = key.split("/")
-    if len(parts) >= 3 and parts[0] == "recordings":
-        return parts[1]
+    if len(parts) >= 2:
+        return session_id_from_stem(parts[0])
     return None
 
 

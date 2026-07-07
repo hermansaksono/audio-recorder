@@ -25,15 +25,28 @@ transcribe = boto3.client("transcribe")
 table = boto3.resource("dynamodb").Table(os.environ["TABLE_NAME"])
 
 
+def session_id_from_stem(stem):
+    """
+    Recover the session id from a folder/file stem of the form
+    ``{participant_id}-{YYYYMMDD}-{HHMMSS}-{session_id}``. The participant id, date and
+    time never contain "-", so everything after the third "-" is the session id (which
+    may itself contain "-"). Returns None if the stem has too few fields.
+    """
+    fields = stem.split("-", 3)
+    if len(fields) == 4:
+        return fields[3]
+    return None
+
+
 def session_id_from_media_uri(uri):
     """
-    Recover the session id from ``s3://{bucket}/recordings/{session_id}/audio.wav``.
+    Recover the session id from ``s3://{bucket}/{stem}/{stem}.wav``.
     """
     without_scheme = uri.split("://", 1)[-1]
     parts = without_scheme.split("/")
-    # parts == [bucket, "recordings", session_id, "audio.wav"]
-    if len(parts) >= 4 and parts[1] == "recordings":
-        return parts[2]
+    # parts == [bucket, stem, "{stem}.wav"]
+    if len(parts) >= 3:
+        return session_id_from_stem(parts[1])
     return None
 
 

@@ -173,7 +173,10 @@ def display_preview_page(bucket):
     with col2:
         if st.button("Yes, I can hear my recording", use_container_width=True):
             logger.info("Audio preview confirmed by user")
-            key = build_audio_key(st.session_state["session_id"])
+            key = build_audio_key(
+                st.session_state["session_id"],
+                st.session_state.get("participant_id"),
+            )
             with st.spinner("Saving your story..."):
                 uploaded = upload_audio_to_s3(
                     st.session_state["Audio_Story"], bucket, key

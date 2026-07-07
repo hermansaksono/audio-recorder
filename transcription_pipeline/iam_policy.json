@@ -5,7 +5,7 @@
       "Sid": "ReadAudio",
       "Effect": "Allow",
       "Action": ["s3:GetObject"],
-      "Resource": "arn:aws:s3:::storycraft-audio-bucket/recordings/*"
+      "Resource": "arn:aws:s3:::storycraft-audio-bucket/*"
     },
     {
       "Sid": "RunTranscribeJobs",

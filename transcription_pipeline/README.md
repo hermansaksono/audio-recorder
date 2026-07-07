@@ -12,8 +12,9 @@ repo, but it is deployed to AWS, not run from this branch.
 ## Flow
 
 ```
-recorder app  ──►  s3://storycraft-audio-bucket/recordings/{session_id}/audio.wav
-                        │  (S3 ObjectCreated event, prefix "recordings/", suffix ".wav")
+recorder app  ──►  s3://storycraft-audio-bucket/{stem}/{stem}.wav
+                        │  stem = {participant_id}-{YYYYMMDD}-{HHMMSS}-{session_id}  (Eastern time)
+                        │  (S3 ObjectCreated event, no prefix, suffix ".wav")
                         ▼
                    Lambda A  (lambda_start_transcription.py)
                         │      starts an async Transcribe job (no output bucket, so the
@@ -35,10 +36,15 @@ to `storycraft-audio-bucket` — the pipeline only ever reads the audio from it.
 
 ## The shared contract (must match the two Streamlit apps)
 
-- **S3 key:** `recordings/{session_id}/audio.wav` — written by the recorder
-  (`recorder_services.build_audio_key`) and stored on the item by the conversation
-  app (`finalise_services.build_audio_key`). The `session_id` is the second path
-  segment.
+- **S3 key:** `{stem}/{stem}.wav` where
+  `stem = {participant_id}-{YYYYMMDD}-{HHMMSS}-{session_id}` (Eastern local time) —
+  written by the recorder (`recorder_services.build_audio_key`). The `participant_id`,
+  date and time contain no hyphens, so the `session_id` is everything after the third
+  hyphen of the stem (`stem.split("-", 3)[3]`), which stays correct even if the
+  `session_id` itself contains hyphens. ⚠️ The conversation app
+  (`finalise_services.build_audio_key`) must build the SAME key if it stores an audio
+  location on the item; the pipeline itself reads the key from the S3 event, so it does
+  not depend on that stored value.
 - **DynamoDB primary key:** `session_id` on table
   `micro-narrative-story-app-database`. ⚠️ **Confirm the table's partition key is
   actually `session_id`** before deploying — `update_item` depends on it.
@@ -67,8 +73,8 @@ Lambda B:
    account id / bucket / table if they change) plus the AWS-managed
    `AWSLambdaBasicExecutionRole` for CloudWatch logs.
 2. **Lambda A** — Python 3.12, handler `lambda_start_transcription.handler`, the role
-   above, env vars set. Add an **S3 trigger** on `storycraft-audio-bucket` with prefix
-   `recordings/` and suffix `.wav`.
+   above, env vars set. Add an **S3 trigger** on `storycraft-audio-bucket` with suffix
+   `.wav` (no prefix — the recordings sit at the bucket root).
 3. **Lambda B** — Python 3.12, handler `lambda_store_transcript.handler`, same role,
    env vars set.
 4. **EventBridge rule** — event pattern:

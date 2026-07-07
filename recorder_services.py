@@ -1,4 +1,6 @@
 import io
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import boto3
 import streamlit as st
@@ -6,17 +8,33 @@ from pydub import AudioSegment
 
 logger = st.logger.get_logger("micronarratives")
 
+# US Eastern *local* time (EST in winter, EDT in summer) for the upload timestamp.
+EASTERN = ZoneInfo("America/New_York")
 
-def build_audio_key(session_id):
-    """
-    Build the deterministic S3 key for this session's recording, e.g.
-    ``recordings/{session_id}/audio.wav``.
 
-    This MUST match the key the conversation app stores on the DynamoDB item, so the
-    transcription pipeline can find the audio. It is derived purely from the session
-    id (unique per session), so no shared timestamp is needed.
+def build_audio_key(session_id, participant_id):
     """
-    return f"recordings/{session_id}/audio.wav"
+    Build the S3 key for this session's recording, e.g.
+
+        {stem}/{stem}.wav
+
+    where ``stem`` is ``{participant_id}-{YYYYMMDD}-{HHMMSS}-{session_id}`` and the
+    timestamp is US Eastern local time.
+
+    The transcription pipeline recovers the ``session_id`` from this path to locate the
+    DynamoDB item, so the layout is a shared contract (see ``transcription_pipeline``).
+    ``session_id`` MUST stay last: the participant id is sanitised to remove hyphens and
+    the date/time are hyphen-free, so the only structural hyphens are the three
+    separators -- the pipeline treats everything after the third hyphen as the session
+    id, which stays correct even if the session id itself contains hyphens.
+    """
+    now = datetime.now(EASTERN)
+    date = now.strftime("%Y%m%d")
+    time = now.strftime("%H%M%S")
+    # Guarantee the participant id contributes no structural hyphens.
+    pid = (participant_id or "unknown").replace("-", "_")
+    stem = f"{pid}-{date}-{time}-{session_id}"
+    return f"{stem}/{stem}.wav"
 
 
 @st.cache_resource
