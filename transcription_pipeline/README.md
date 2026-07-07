@@ -63,6 +63,8 @@ to `storycraft-audio-bucket` — the pipeline only ever reads the audio from it.
 Lambda A:
 - `LANGUAGE_CODE` (optional, default `en-US`)
 - `JOB_NAME_PREFIX` (optional, default `story-`)
+- `TABLE_NAME` = `micro-narrative-story-app-database` (optional — enables the
+  `PROCESSING` marker; if unset the marker is skipped and transcription still works)
 
 Lambda B:
 - `TABLE_NAME` = `micro-narrative-story-app-database`
@@ -87,12 +89,30 @@ Lambda B:
    ```
    Target: Lambda B.
 
+## `transcription_status` lifecycle
+
+Each session item carries a `transcription_status` that only moves forward, so the
+state of every session is a single queryable field:
+
+| Value | Set by | Meaning |
+| --- | --- | --- |
+| *(absent)* | — | App 1 wrote the row but the pipeline never ran (no recording, or Lambda A never fired). |
+| `PROCESSING` | Lambda A | Transcribe job submitted; awaiting completion. A session stuck here past a few minutes needs attention. |
+| `COMPLETED` | Lambda B | Transcript written to `text_story` (non-empty). |
+| `EMPTY` | Lambda B | Job completed but the transcript was blank — silence / no speech / failed mic. `text_story` is `""`. |
+| `FAILED` | Lambda B | Transcribe job failed; `transcription_failure_reason` holds why. |
+
 ## Idempotency & errors
 
 - Lambda A uses a deterministic job name (`story-{session_id}`) and replaces an
   existing job on re-upload, so a participant re-recording just overwrites.
+- Lambda A's `PROCESSING` marker is best-effort: the job is already submitted before it
+  runs, so a DynamoDB hiccup there is logged, not raised, and does not block
+  transcription.
 - Lambda B uses `update_item`, so re-delivered events are harmless and only the
   transcription fields are touched.
+- A completed-but-blank transcript is written as `EMPTY` (not `COMPLETED`) so it is not
+  mistaken for a successful transcription.
 - On a FAILED job, Lambda B writes `transcription_status = "FAILED"` plus
   `transcription_failure_reason` instead of a transcript.
 

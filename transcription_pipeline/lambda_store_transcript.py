@@ -114,4 +114,9 @@ def handler(event, context):
         return
 
     text = fetch_transcript_text(job["Transcript"]["TranscriptFileUri"])
-    update_item(session_id, text_story=text, status="COMPLETED")
+    # A completed job with a blank transcript means silence / no speech was detected
+    # (e.g. a dead-air recording or a failed mic). Flag it so it is not mistaken for a
+    # successful transcription -- an empty text_story otherwise looks identical to a
+    # session that never recorded.
+    status = "COMPLETED" if text.strip() else "EMPTY"
+    update_item(session_id, text_story=text, status=status)
