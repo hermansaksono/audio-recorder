@@ -137,7 +137,9 @@ def display_record_page():
         "*Note: recording will automatically stop after 10 minutes.*"
     )
 
-    audio_input = st.audio_input("", label_visibility="collapsed")
+    audio_input = st.audio_input(
+        "", label_visibility="collapsed", key="story_audio"
+    )
     audio_bytes = audio_input.getvalue() if audio_input else None
 
     if audio_bytes:
@@ -166,6 +168,12 @@ def display_preview_page(bucket):
     with col1:
         if st.button("No, I cannot hear my recording", use_container_width=True):
             logger.info("Audio preview rejected by user")
+            # Clear the recording so the record page starts empty; otherwise the
+            # audio widget still holds this clip and would bounce straight back to
+            # this preview instead of letting the participant re-record.
+            st.session_state["Audio_Story"] = None
+            st.session_state["Audio_Story_Preview"] = None
+            st.session_state.pop("story_audio", None)
             st.session_state["previousAgentState"] = "record"
             st.session_state["agentState"] = "micHelp"
             st.rerun()

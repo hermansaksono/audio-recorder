@@ -157,7 +157,9 @@ def checkmicrophone():
         'Please click "Allow".*'
     )
 
-    audio_input = st.audio_input("", label_visibility="collapsed")
+    audio_input = st.audio_input(
+        "", label_visibility="collapsed", key="mic_check_audio"
+    )
 
     audio_value = audio_input.getvalue() if audio_input else None
 
