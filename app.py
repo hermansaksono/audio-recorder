@@ -4,8 +4,6 @@ import micCheck
 from recorder_services import (
     build_audio_key,
     create_bucket_link,
-    create_database_link,
-    fetch_session_data,
     process_recorded_audio,
     upload_audio_to_s3,
 )
@@ -13,17 +11,6 @@ from recorder_services import (
 logger = st.logger.get_logger("micronarratives")
 
 MAX_RECORDING_SECONDS = 10 * 60  # 10 minutes
-
-# Labels for the storytelling points shown while the participant records.
-SUMMARY_LABELS = {
-    "aspirations": "Aspirations",
-    "activity": "Activity",
-    "location": "Location",
-    "time": "Time",
-    "companions": "Companions",
-    "feelings": "Feelings",
-    "takeaways": "Takeaways",
-}
 
 
 def initialiseAppPage():
@@ -84,47 +71,18 @@ def initialiseSessionState():
     if "agentState" not in st.session_state:
         st.session_state["agentState"] = "micCheck"
 
-    # The participant's storytelling points, fetched from DynamoDB once.
-    if "summary_answers" not in st.session_state:
-        st.session_state["summary_answers"] = None
-
     if "Audio_Story" not in st.session_state:
         st.session_state["Audio_Story"] = None
     if "Audio_Story_Preview" not in st.session_state:
         st.session_state["Audio_Story_Preview"] = None
 
 
-def loadSummaryAnswers(table):
-    """Fetch and cache this session's storytelling points from DynamoDB."""
-    if st.session_state["summary_answers"] is not None:
-        return
-
-    item = fetch_session_data(table, st.session_state["session_id"])
-    st.session_state["summary_answers"] = (item or {}).get("summary_answers", {})
-
-
-def render_summary_points():
-    """Show the storytelling points so the participant can refer to them while telling
-    their story."""
-    summary_answers = st.session_state.get("summary_answers") or {}
-    if not summary_answers:
-        return
-
-    st.markdown("**Here are some aspects of your story.**")
-    for field, content in summary_answers.items():
-        label = SUMMARY_LABELS.get(field, field.capitalize())
-        st.markdown(f"- **{label}**: {content}")
-
-
 def display_record_page():
-    """Show the storytelling points and the recording widget."""
-    render_summary_points()
-
+    """Show the recording widget."""
     st.markdown(
-        "**Now that you have the storytelling points, you can bring your story to "
-        "life. Please tell it out loud in your own words, just like you would if "
-        "you were sharing it with a friend or family member who's never heard it "
-        "before.**"
+        "**You can bring your story to life. Please tell it out loud in your own "
+        "words, just like you would if you were sharing it with a friend or family "
+        "member who's never heard it before.**"
     )
 
     st.divider()
@@ -228,13 +186,10 @@ if __name__ == "__main__":
     initialiseSessionState()
 
     bucket = create_bucket_link()
-    table = create_database_link()
 
     if not st.session_state.get("session_id"):
         display_missing_session_page()
     else:
-        loadSummaryAnswers(table)
-
         match st.session_state["agentState"]:
             case "micCheck":
                 micCheck.checkmicrophone()

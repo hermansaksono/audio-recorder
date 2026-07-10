@@ -25,29 +25,31 @@ transcribe = boto3.client("transcribe")
 table = boto3.resource("dynamodb").Table(os.environ["TABLE_NAME"])
 
 
-def session_id_from_stem(stem):
+def parse_stem(stem):
     """
-    Recover the session id from a folder/file stem of the form
-    ``{participant_id}-{YYYYMMDD}-{HHMMSS}-{session_id}``. The participant id, date and
-    time never contain "-", so everything after the third "-" is the session id (which
-    may itself contain "-"). Returns None if the stem has too few fields.
+    Parse a folder/file stem of the form
+    ``{participant_id}-{YYYYMMDD}-{HHMMSS}-{session_id}`` into
+    ``(participant_id, session_id)``. The participant id, date and time never contain
+    "-", so the first field is the participant id and everything after the third "-" is
+    the session id (which may itself contain "-"). Returns ``(None, None)`` if the stem
+    has too few fields.
     """
     fields = stem.split("-", 3)
     if len(fields) == 4:
-        return fields[3]
-    return None
+        return fields[0], fields[3]
+    return None, None
 
 
-def session_id_from_media_uri(uri):
+def parse_media_uri(uri):
     """
-    Recover the session id from ``s3://{bucket}/{stem}/{stem}.wav``.
+    Recover ``(participant_id, session_id)`` from ``s3://{bucket}/{stem}/{stem}.wav``.
     """
     without_scheme = uri.split("://", 1)[-1]
     parts = without_scheme.split("/")
     # parts == [bucket, stem, "{stem}.wav"]
     if len(parts) >= 3:
-        return session_id_from_stem(parts[1])
-    return None
+        return parse_stem(parts[1])
+    return None, None
 
 
 def fetch_transcript_text(transcript_file_uri):
@@ -57,11 +59,19 @@ def fetch_transcript_text(transcript_file_uri):
     return payload["results"]["transcripts"][0]["transcript"]
 
 
-def update_item(session_id, *, text_story=None, status, failure_reason=None):
+def update_item(
+    session_id, *, text_story=None, status, failure_reason=None, participant_id=None
+):
     """
-    Write only the transcription-related attributes onto the existing item. Using
-    update_item (not put_item) keeps this idempotent and preserves everything the
-    conversation app wrote.
+    Write only the transcription-related attributes onto the item. Using update_item
+    (not put_item) keeps this idempotent and preserves everything the conversation app
+    wrote. DynamoDB's update_item upserts, so if no item exists for this session (e.g. a
+    standalone recording that never went through the conversation app) a new item is
+    created with just these attributes.
+
+    ``participant_id`` (recovered from the media path) is written with if_not_exists so
+    a newly created item carries participant metadata, while an item the conversation app
+    already populated keeps its own (unsanitised) value.
     """
     set_parts = ["#status = :status"]
     names = {"#status": "transcription_status"}
@@ -76,6 +86,11 @@ def update_item(session_id, *, text_story=None, status, failure_reason=None):
         set_parts.append("#reason = :reason")
         names["#reason"] = "transcription_failure_reason"
         values[":reason"] = failure_reason
+
+    if participant_id is not None:
+        set_parts.append("#pid = if_not_exists(#pid, :pid)")
+        names["#pid"] = "participant_id"
+        values[":pid"] = participant_id
 
     table.update_item(
         Key={"session_id": session_id},
@@ -99,14 +114,19 @@ def handler(event, context):
         "TranscriptionJob"
     ]
     media_uri = job["Media"]["MediaFileUri"]
-    session_id = session_id_from_media_uri(media_uri)
+    participant_id, session_id = parse_media_uri(media_uri)
     if not session_id:
         print(f"Cannot recover session id from media URI: {media_uri}")
         return
 
     if status == "FAILED":
         reason = job.get("FailureReason", "unknown")
-        update_item(session_id, status="FAILED", failure_reason=reason)
+        update_item(
+            session_id,
+            status="FAILED",
+            failure_reason=reason,
+            participant_id=participant_id,
+        )
         return
 
     if status != "COMPLETED":
@@ -119,4 +139,6 @@ def handler(event, context):
     # successful transcription -- an empty text_story otherwise looks identical to a
     # session that never recorded.
     status = "COMPLETED" if text.strip() else "EMPTY"
-    update_item(session_id, text_story=text, status=status)
+    update_item(
+        session_id, text_story=text, status=status, participant_id=participant_id
+    )
