@@ -1,148 +1,105 @@
-# micro-narratives-app
+# audio-recorder
 
-A Streamlit app to collect rich yet narrowly-scoped qualitative data from study participants.
+A standalone Streamlit app that records a study participant's spoken story and uploads
+it to Amazon S3, plus a serverless pipeline that transcribes the recording and writes
+the transcript back to DynamoDB.
 
-## :wave: Welcome
+This repository was split out of the combined micro-narratives storytelling app. It is
+one part of a three-app pipeline:
 
-Welcome to the micro-narratives project!
-
-This repository contains the code for the main micro-narratives application.
-It is currently under active development, so expect to see frequent changes here.
-
-We welcome your feedback and input - as a small community, we are keen to hear about your experiences when using, testing and deploying the application.
-Please [open an issue](https://github.com/micro-narratives/micro-narratives-app/issues) if you experience a problem, or have suggestions for new features.
-
-Write access to this repository is restricted to the main project developers, so if you would like to make direct changes to the code yourself, make a fork of this repository before beginning.
-Note that GitHub's forking policy means that all forks of this repo will remain private, but will inherit permissions from this repository.
-The fork will therefore be visible by others within this GitHub organisation (for more details, see [GitHub's documentation](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/about-permissions-and-visibility-of-forks)).
-
-The documentation within this file should be sufficient for you to get a local instance of the app up and running.
-For more in-depth documentation and deployment guidance, see the [`docs` folder](./docs).
-
-## :arrow_down_small: Get the code
-
-If you have write access to this repository, or have no need to push your changes back, clone the repository from GitHub:
-
-```shell
-git clone git@github.com:micro-narratives/micro-narratives-app.git
+```
+App 1 (conversation, separate repo)        App 2 — this repo (recorder)         App 3 — this repo (pipeline)
+────────────────────────────────────       ─────────────────────────────       ────────────────────────────
+collects the participant's story      ──►   reads those points, records    ──►  S3 upload triggers Lambdas
+points and writes them to DynamoDB          the audio, uploads the .wav          that transcribe the audio and
+keyed by session_id                         to S3                                write text_story to DynamoDB
+        │                                            ▲
+        └──────────── shared session_id via URL ─────┘
 ```
 
-Otherwise, you can [make a fork](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo) and then obtain a clone of the fork:
+There is **no in-app handoff** between App 1 and App 2. They are opened as two separate
+links that carry the **same identifiers** in the URL, and they share state only through
+the DynamoDB item keyed by `session_id`.
 
-```shell
-git clone git@github.com:<your-account-or-organisation>/micro-narratives-app.git
-```
+## What this repo contains
 
-If you have not already done so, you may need to [generate an SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent) and [add it to your GitHub account](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account).
+| Path | Role |
+| --- | --- |
+| `app.py` | App 2 — the Streamlit recorder (entry point). |
+| `micCheck.py` | App 2 — microphone check / help / session-ended screens. |
+| `recorder_services.py` | App 2 — S3 + DynamoDB clients, audio trimming/preview, S3 key contract. |
+| `transcription_pipeline/` | App 3 — two AWS Lambdas that transcribe uploads. See its own [README](transcription_pipeline/README.md). |
 
-## :technologist: Running the app
+## How App 2 works
 
-There are two main options to run the app locally:
+The recorder reads `SESSION_ID`, `PROLIFIC_PID`, and `STUDY_ID` from the URL query string
+(lowercase fallbacks accepted for hand-built links). `session_id` is **required** — it is
+the DynamoDB primary key and drives the S3 upload path, so without it the app shows a
+"missing session" message and stops.
 
-- [Run the app inside a dev container](#running-the-app-via-a-dev-container)
-- [Run the app using your own Python installation](#running-via-your-own-python-installation)
+It then runs a small state machine (`agentState`):
 
-The first option is recommended for most users.
+1. **Mic check** — record "hello" and play it back to confirm the microphone works.
+   Failure routes to a **mic-help** page with troubleshooting steps, or ends the session.
+2. **Record** — shows the storytelling points fetched from DynamoDB (`summary_answers`),
+   then records the story. The recording is trimmed to a 10-minute maximum.
+3. **Preview** — plays back the first 10 seconds. If the participant confirms, the **full**
+   recording is uploaded to S3; if not, it is discarded so they can re-record.
+4. **Done / upload-failed** — a thank-you screen, or a retry on upload failure.
 
-### Create a Streamlit secrets file
+### The shared S3 key contract
 
-Regardless of how you choose to run the app, you will need to create a `.streamlit` directory inside the repository and add a new file, `secrets.toml`, which contains various API keys and settings for the app.
-This file should not be committed to version control.
+The recording is uploaded to `{stem}/{stem}.wav` where
+`stem = {participant_id}-{YYYYMMDD}-{HHMMSS}-{session_id}` (US Eastern time). The
+participant id, date, and time contain no hyphens, so the transcription pipeline recovers
+`session_id` as everything after the third hyphen. Keep this layout in sync with
+`transcription_pipeline` if you change it.
 
-The file should have the following structure, which you should fill in with your own API keys and project details:
+App 2 only ever **reads** from DynamoDB (the storytelling points). The transcript and
+`transcription_status` are written by App 3, not here.
 
-```toml
-OPENAI_API_KEY = "<your-openai-api-key>"
-LANGCHAIN_API_KEY = "<your-langchain-api-key>"
-LANGCHAIN_PROJECT = "<your-langchain-project-name>"
-LANGCHAIN_TRACING_V2 = true
-```
+## Running locally
 
-### Running the app via a dev container
-
-You will need to have [VSCode](https://code.visualstudio.com/download) and [Docker](https://www.docker.com/products/docker-desktop/) installed.
-Make sure that Docker is running before you proceed with the remaining steps. 
-
-Open VSCode, and then install the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers). To do so, open the Extensions menu (through one of the icons on the left of your screen) and you can search for the Dev Containers extension there.
-
-From the Command Palette in VSCode (at the top of the screen, or press `F1` or `Ctrl+Shift+p`), run the "Dev Containers: Open Folder in Container" command. 
-Select the project's folder, and the dev container will start up.
-
-When running the container, your project directory is automatically mounted at `/workspaces/micro-narratives-app`. 
-Any files you create or modify in this directory will persist between container rebuilds and are synchronized between your local machine and the container.
-
-For further details about dev containers, see [VSCode's documentation](https://code.visualstudio.com/docs/devcontainers/containers).
-
-### Running via your own Python installation
-
-It is recommended that you use Python 3.12 to run this app.
-
-This project uses [`pipenv`](https://pipenv.pypa.io/en/latest/installation.html) for both creating a virtual environment and managing dependencies.
-If you don't have `pipenv` installed already, do so with
+This project uses Python 3.12 and [`pipenv`](https://pipenv.pypa.io/en/latest/).
 
 ```sh
-pip install --user pipenv
-```
-
-or see the [guide in `pipenv`'s documentation](https://pipenv.pypa.io/en/latest/installation.html) for alternative installation methods.
-
-_Note: We have had reports of issues with `pipenv` if it is used after the devcontainer setup method has already been used. If this affects you, remove the `.venv` directory that was created by the devcontainer before using `pipenv`._
-
-Create a virtual environment and install the required packages with
-
-```sh
-pipenv sync
-```
-
-> [!TIP]
-> If you do not have Python 3.12, you can try
->
->```shell
-> pipenv --python <your-python-version> install 
-> ```
->
-> first. 
-If there are no incompatibilities with other package requirements, `pipenv sync` will be able to install the dependencies.
-
-You can then run the app directly with
-
-```sh
+pipenv sync            # install dependencies (streamlit, boto3, pydub)
 pipenv run streamlit run app.py
 ```
 
-or alternatively, enable the virtual environment first and run all subsequent commands without `pipenv`:
+Because the app requires a `session_id`, open it with the identifiers in the URL, e.g.:
 
-```sh
-pipenv shell
-streamlit run app.py
+```
+http://localhost:8501/?SESSION_ID=test-session-1&PROLIFIC_PID=TESTPID&STUDY_ID=TESTSTUDY
 ```
 
-More details on the [`shell`](https://pipenv.pypa.io/en/latest/cli.html#shell), [`sync`](https://pipenv.pypa.io/en/latest/cli.html#sync) and [`run`](https://pipenv.pypa.io/en/latest/cli.html#run) commands can be found in `pipenv`'s [CLI documentation](https://pipenv.pypa.io/en/latest/cli.html).
+### Secrets
 
-## :rocket: Deploying the app
-
-See [`docs/deployment.md`](docs/deployment.md) for a guide to deploying the app on Streamlit Community Cloud or AWS.
-
-## :pen: Customising app content
-
-By default, the app will use the content from the example configuration file, `configs/example_social.toml`.
-To customise your app's content, make a copy of one of the existing example config files and adapt the content inside to your needs.
-Make sure to retain the same structure inside the file.
-More details about each of the sections are available inside the example configuration files.
-
-To tell the app to use content from a different file, you can either:
-
-run the app with an additional argument to specify the file:
-
-```sh
-streamlit run app.py path-to-file/config-file-name.toml
-```
-
-or add another line to your Streamlit secrets file (or the secrets configuration in Streamlit Community Cloud):
+Create `.streamlit/secrets.toml` (not committed) with your AWS configuration:
 
 ```toml
-CONFIG_FILE = 'path-to-file/config-file-name.toml'
+S3_BUCKET_NAME       = "<your-audio-bucket>"
+DYNAMODB_TABLE_NAME  = "<your-dynamodb-table>"
+AWS_DEFAULT_REGION   = "<region, e.g. us-east-2>"
+AWS_ACCESS_KEY_ID    = "<your-access-key-id>"
+AWS_SECRET_ACCESS_KEY = "<your-secret-access-key>"
 ```
 
-If both of these options are used, the file specified in the `streamlit run` command will be loaded.
-If neither option is used, the content from `configs/example_social.toml` is brought into the app by default.
+If the S3 or DynamoDB settings are absent, the app still runs but skips the upload /
+storytelling-points lookup respectively (useful for UI testing).
+
+## The transcription pipeline (App 3)
+
+App 3 is **not** a Streamlit app — it is two AWS Lambda functions wired to S3 and
+EventBridge. When the recorder uploads a `.wav`, Lambda A starts an asynchronous Amazon
+Transcribe job; when the job completes, Lambda B writes `text_story` and
+`transcription_status` back onto the session's DynamoDB item. The transcript lives **only
+in DynamoDB**. See [`transcription_pipeline/README.md`](transcription_pipeline/README.md)
+for the flow, the `transcription_status` lifecycle, and deployment steps.
+
+## Deployment
+
+The recorder is a standard Streamlit app (see the `Procfile`) and can be deployed on
+Streamlit Community Cloud or any host that runs `streamlit run app.py` (Python 3.12).
+Configure the secrets above in the host's secrets manager. Deploy the transcription
+pipeline separately to AWS as described in its README.
