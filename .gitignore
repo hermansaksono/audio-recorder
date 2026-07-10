@@ -174,3 +174,6 @@ cython_debug/
 #.idea/
 .vscode/launch.json
 .DS_Store
+
+# Streamlit secrets (API keys, AWS credentials) - never commit
+.streamlit/secrets.toml
