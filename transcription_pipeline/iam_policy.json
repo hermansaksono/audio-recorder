@@ -5,7 +5,7 @@
       "Sid": "ReadAudio",
       "Effect": "Allow",
       "Action": ["s3:GetObject"],
-      "Resource": "arn:aws:s3:::storycraft-audio-bucket/*"
+      "Resource": "arn:aws:s3:::storycraft-audio-bucket-us1/*"
     },
     {
       "Sid": "RunTranscribeJobs",
@@ -21,7 +21,7 @@
       "Sid": "UpdateSessionItem",
       "Effect": "Allow",
       "Action": ["dynamodb:UpdateItem"],
-      "Resource": "arn:aws:dynamodb:us-east-2:*:table/micro-narrative-story-app-database"
+      "Resource": "arn:aws:dynamodb:us-east-1:956094662271:table/storytelling_interaction"
     }
   ]
 }
