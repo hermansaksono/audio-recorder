@@ -154,10 +154,46 @@ def display_preview_page(bucket):
             st.rerun()
 
 
+def get_completion_code(session_id):
+    """Last 4 characters of the session id, used as the Qualtrics completion code.
+
+    Only surfaced on the done page, so participants can't get it without finishing.
+    """
+    if not session_id:
+        return None
+    return session_id[-4:].upper()
+
+
 def display_done_page():
     """Terminal congratulations screen."""
     st.markdown("<h2>🎉 Congratulations!</h2>", unsafe_allow_html=True)
     st.markdown("You have finished this experience! Thank you for sharing your story.")
+
+    completion_code = get_completion_code(st.session_state.get("session_id"))
+    if completion_code:
+        st.markdown(
+            "Please copy the completion code below and enter it in the box on the "
+            "survey page to continue."
+        )
+        st.markdown(
+            f"""
+            <div style="
+                font-family: 'Courier New', monospace;
+                font-size: 3rem;
+                font-weight: 700;
+                letter-spacing: 0.6rem;
+                text-align: center;
+                padding: 1rem 0;
+                margin: 1rem 0;
+                border: 2px solid #d0d0d0;
+                border-radius: 10px;
+                background-color: #f5f5f5;
+            ">
+                {completion_code}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 def display_upload_failed_page():
